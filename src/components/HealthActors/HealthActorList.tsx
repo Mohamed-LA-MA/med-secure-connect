@@ -1,4 +1,5 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -9,7 +10,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Eye, TrashIcon, Check, X } from 'lucide-react';
+import { Eye, TrashIcon, Check, X, Bell } from 'lucide-react';
 import { 
   Dialog, 
   DialogContent, 
@@ -20,6 +21,15 @@ import {
 import { useToast } from '@/components/ui/use-toast';
 import { CryptoMaterialForm } from '@/components/Shared/CryptoMaterialForm';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast as sonnerToast } from "@/components/ui/use-toast";
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardFooter, 
+  CardHeader, 
+  CardTitle 
+} from '@/components/ui/card';
 
 // Types
 interface HealthActor {
@@ -32,6 +42,8 @@ interface HealthActor {
   etatRequest: 'PENDING' | 'ACCEPTED' | 'REJECTED';
   numeroOrg: string;
   role: 'MEDECIN' | 'LABORATOIRE' | 'CENTRE_IMAGERIE' | 'ASSURANCE';
+  hasStateChanged?: boolean; // Track if state has changed
+  isNew?: boolean; // Track if this is a new entry
 }
 
 export function HealthActorList() {
@@ -39,105 +51,106 @@ export function HealthActorList() {
   const { organization } = useAuth();
   const [cryptoFormOpen, setCryptoFormOpen] = useState(false);
   const [selectedActor, setSelectedActor] = useState<HealthActor | null>(null);
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
   
   // État pour stocker les acteurs de santé (données fictives pour démo)
-  const [healthActors, setHealthActors] = useState<HealthActor[]>([
-    {
-      id: '1',
-      requestId: 'REQ101',
-      healthActorId: 'HA001',
-      nom: 'Dubois',
-      prenom: 'Claire',
-      matriculeActor: 'MED001',
-      etatRequest: 'PENDING',
-      numeroOrg: 'HCA',
-      role: 'MEDECIN',
-    },
-    {
-      id: '2',
-      requestId: 'REQ102',
-      healthActorId: 'HA002',
-      nom: 'Labo Central',
-      prenom: '',
-      matriculeActor: 'LAB001',
-      etatRequest: 'ACCEPTED',
-      numeroOrg: 'HCA',
-      role: 'LABORATOIRE',
-    },
-    {
-      id: '3',
-      requestId: 'REQ103',
-      healthActorId: 'HA003',
-      nom: 'Centre Imagerie',
-      prenom: 'Paris',
-      matriculeActor: 'IMG001',
-      etatRequest: 'REJECTED',
-      numeroOrg: 'HQA',
-      role: 'CENTRE_IMAGERIE',
-    },
-    {
-      id: '4',
-      requestId: 'REQ104',
-      healthActorId: 'HA004',
-      nom: 'Assurance Santé',
-      prenom: 'Plus',
-      matriculeActor: 'ASS001',
-      etatRequest: 'PENDING',
-      numeroOrg: 'HQA',
-      role: 'ASSURANCE',
-    },
-  ]);
+  const [healthActors, setHealthActors] = useState<HealthActor[]>([]);
+  const [prevActors, setPrevActors] = useState<Record<string, HealthActor>>({});
+  
+  useEffect(() => {
+    // Simulate fetching data from the blockchain API
+    const fetchHealthActors = async () => {
+      // Mock data - in a real app, this would be an API call to blockchain
+      const mockActors = [
+        {
+          id: '1',
+          requestId: 'REQ101',
+          healthActorId: 'HA001',
+          nom: 'Dubois',
+          prenom: 'Claire',
+          matriculeActor: 'MED001',
+          etatRequest: 'PENDING',
+          numeroOrg: 'HCA',
+          role: 'MEDECIN',
+        },
+        {
+          id: '2',
+          requestId: 'REQ102',
+          healthActorId: 'HA002',
+          nom: 'Labo Central',
+          prenom: '',
+          matriculeActor: 'LAB001',
+          etatRequest: 'ACCEPTED',
+          numeroOrg: 'HCA',
+          role: 'LABORATOIRE',
+        },
+        {
+          id: '3',
+          requestId: 'REQ103',
+          healthActorId: 'HA003',
+          nom: 'Centre Imagerie',
+          prenom: 'Paris',
+          matriculeActor: 'IMG001',
+          etatRequest: 'REJECTED',
+          numeroOrg: 'HQA',
+          role: 'CENTRE_IMAGERIE',
+        },
+        {
+          id: '4',
+          requestId: 'REQ104',
+          healthActorId: 'HA004',
+          nom: 'Assurance Santé',
+          prenom: 'Plus',
+          matriculeActor: 'ASS001',
+          etatRequest: 'PENDING',
+          numeroOrg: 'HQA',
+          role: 'ASSURANCE',
+        },
+      ] as HealthActor[];
 
-  // Simuler des appels API
-  const handleAcceptRequest = (actorId: string) => {
-    setHealthActors(
-      healthActors.map(actor => 
-        actor.id === actorId 
-          ? { ...actor, etatRequest: 'ACCEPTED' as const } 
-          : actor
-      )
-    );
-    toast({
-      title: "Demande acceptée",
-      description: "La demande a été acceptée avec succès",
-    });
-    
-    // Simuler l'enregistrement de l'acceptation dans la blockchain
-    const actorToUpdate = healthActors.find(a => a.id === actorId);
-    if (actorToUpdate) {
-      console.log("Enregistrement dans la blockchain - Acceptation:", {
-        requestId: actorToUpdate.requestId,
-        healthActorId: actorToUpdate.healthActorId,
-        action: "ACCEPTED",
-        timestamp: new Date().toISOString()
+      // Compare with previous state to detect changes
+      const newActors = mockActors.map(actor => {
+        const prevActor = prevActors[actor.id];
+        
+        // Check if this is a new actor or if state has changed
+        const isNew = !prevActor;
+        const hasStateChanged = prevActor && prevActor.etatRequest !== actor.etatRequest;
+        
+        // If state has changed, show a notification
+        if (hasStateChanged) {
+          sonnerToast({
+            title: "État de requête modifié",
+            description: `La requête ${actor.requestId} est passée à l'état ${
+              actor.etatRequest === 'ACCEPTED' ? 'acceptée' : 
+              actor.etatRequest === 'REJECTED' ? 'rejetée' : 'en attente'
+            }`,
+          });
+        }
+        
+        return {
+          ...actor,
+          hasStateChanged,
+          isNew
+        };
       });
-    }
-  };
+      
+      setHealthActors(newActors);
+      
+      // Update previous actors state for next comparison
+      const newPrevActors: Record<string, HealthActor> = {};
+      mockActors.forEach(actor => {
+        newPrevActors[actor.id] = { ...actor };
+      });
+      setPrevActors(newPrevActors);
+    };
 
-  const handleRejectRequest = (actorId: string) => {
-    setHealthActors(
-      healthActors.map(actor => 
-        actor.id === actorId 
-          ? { ...actor, etatRequest: 'REJECTED' as const } 
-          : actor
-      )
-    );
-    toast({
-      title: "Demande rejetée",
-      description: "La demande a été rejetée",
-    });
+    fetchHealthActors();
     
-    // Simuler l'enregistrement du rejet dans la blockchain
-    const actorToUpdate = healthActors.find(a => a.id === actorId);
-    if (actorToUpdate) {
-      console.log("Enregistrement dans la blockchain - Rejet:", {
-        requestId: actorToUpdate.requestId,
-        healthActorId: actorToUpdate.healthActorId,
-        action: "REJECTED",
-        timestamp: new Date().toISOString()
-      });
-    }
-  };
+    // Set up a polling interval to simulate real-time updates
+    const interval = setInterval(fetchHealthActors, 30000); // Check every 30 seconds
+    
+    return () => clearInterval(interval);
+  }, []);
 
   const handleCreateCryptoMaterial = (actor: HealthActor) => {
     // Ouvrir le formulaire de création de matériel crypto
@@ -184,26 +197,15 @@ export function HealthActorList() {
       description: "Matériel cryptographique créé et identifiants enregistrés",
       variant: "default",
     });
-  };
-
-  const handleDeleteRequest = (actorId: string) => {
-    // Simuler l'enregistrement de la suppression dans la blockchain
-    const actorToDelete = healthActors.find(a => a.id === actorId);
-    if (actorToDelete) {
-      console.log("Enregistrement dans la blockchain - Suppression:", {
-        requestId: actorToDelete.requestId,
-        healthActorId: actorToDelete.healthActorId,
-        action: "DELETED",
-        timestamp: new Date().toISOString()
-      });
-    }
     
-    // Simulation de suppression
-    setHealthActors(healthActors.filter(actor => actor.id !== actorId));
-    toast({
-      title: "Demande supprimée",
-      description: "La demande a été supprimée avec succès",
-    });
+    // Mettre à jour l'état local pour indiquer que le matériel a été créé
+    setHealthActors(prevState => 
+      prevState.map(actor => 
+        actor.id === selectedActor.id 
+          ? { ...actor, hasCryptoMaterial: true }
+          : actor
+      )
+    );
   };
 
   // Fonction pour convertir le rôle en format lisible
@@ -217,106 +219,238 @@ export function HealthActorList() {
     return roleMap[role] || role;
   };
 
+  // Function to get appropriate color based on role
+  const getRoleColor = (role: HealthActor['role']) => {
+    const colorMap = {
+      'MEDECIN': 'bg-blue-50 text-blue-700',
+      'LABORATOIRE': 'bg-purple-50 text-purple-700',
+      'CENTRE_IMAGERIE': 'bg-indigo-50 text-indigo-700',
+      'ASSURANCE': 'bg-emerald-50 text-emerald-700',
+    };
+    return colorMap[role] || 'bg-gray-50 text-gray-700';
+  };
+
+  // Function to get status color for both badges and cards
+  const getStatusColor = (status: HealthActor['etatRequest']) => {
+    const colorMap = {
+      'PENDING': 'bg-yellow-50 text-yellow-700 border-yellow-200',
+      'ACCEPTED': 'bg-green-50 text-green-700 border-green-200',
+      'REJECTED': 'bg-red-50 text-red-700 border-red-200',
+    };
+    return colorMap[status];
+  };
+
   return (
-    <div className="bg-white rounded-md shadow">
-      <div className="p-4 border-b">
-        <h2 className="text-lg font-medium">Liste des acteurs de santé</h2>
-      </div>
-      
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-gray-50">
-              <TableHead>ID</TableHead>
-              <TableHead>Nom</TableHead>
-              <TableHead>Matricule</TableHead>
-              <TableHead>Rôle</TableHead>
-              <TableHead>Organisation</TableHead>
-              <TableHead>État</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+    <div className="space-y-4">
+      <div className="bg-white rounded-md shadow">
+        <div className="p-4 border-b flex justify-between items-center">
+          <div>
+            <h2 className="text-lg font-medium">Liste des requêtes d'acteurs de santé</h2>
+            <p className="text-sm text-gray-500 mt-1">
+              Les requêtes sont récupérées depuis la blockchain et leur état est géré par une entité externe
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant={viewMode === 'table' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('table')}
+              className="transition-all"
+            >
+              Tableau
+            </Button>
+            <Button 
+              variant={viewMode === 'cards' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('cards')}
+              className="transition-all"
+            >
+              Cartes
+            </Button>
+          </div>
+        </div>
+        
+        {viewMode === 'table' ? (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gray-50">
+                  <TableHead>ID Requête</TableHead>
+                  <TableHead>Nom</TableHead>
+                  <TableHead>Matricule</TableHead>
+                  <TableHead>Rôle</TableHead>
+                  <TableHead>Organisation</TableHead>
+                  <TableHead>État</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {healthActors.map((actor) => (
+                  <TableRow 
+                    key={actor.id} 
+                    className={`hover:bg-gray-50 ${actor.isNew ? 'animate-fade-in' : ''}`}
+                  >
+                    <TableCell className="font-medium flex items-center gap-2">
+                      {actor.requestId}
+                      {actor.hasStateChanged && (
+                        <span className="relative flex h-3 w-3 animate-pulse">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {actor.prenom ? `${actor.nom} ${actor.prenom}` : actor.nom}
+                    </TableCell>
+                    <TableCell>{actor.matriculeActor}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={`${getRoleColor(actor.role)}`}>
+                        {formatRole(actor.role)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{actor.numeroOrg}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={getStatusColor(actor.etatRequest)}>
+                        {actor.etatRequest === 'PENDING' && "En attente"}
+                        {actor.etatRequest === 'ACCEPTED' && "Acceptée"}
+                        {actor.etatRequest === 'REJECTED' && "Rejetée"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="flex justify-end gap-2">
+                      {/* Afficher uniquement le bouton de création de crypto pour les demandes acceptées */}
+                      {actor.etatRequest === 'ACCEPTED' && (
+                        <Button 
+                          variant="outline"
+                          className="h-8 text-xs transition-all hover:bg-green-50 hover:text-green-700 hover:border-green-300"
+                          onClick={() => handleCreateCryptoMaterial(actor)}
+                        >
+                          Créer Crypto
+                        </Button>
+                      )}
+                      
+                      {/* Détails de l'acteur */}
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="icon" className="h-8 w-8">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-md">
+                          <DialogHeader>
+                            <DialogTitle>Détails de la requête d'acteur de santé</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4 mt-4">
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="text-sm text-gray-500">ID de requête:</div>
+                              <div>{actor.requestId}</div>
+                              
+                              <div className="text-sm text-gray-500">ID de l'acteur:</div>
+                              <div>{actor.healthActorId}</div>
+                              
+                              <div className="text-sm text-gray-500">Nom:</div>
+                              <div>{actor.nom}</div>
+                              
+                              <div className="text-sm text-gray-500">Prénom:</div>
+                              <div>{actor.prenom || "-"}</div>
+                              
+                              <div className="text-sm text-gray-500">Matricule:</div>
+                              <div>{actor.matriculeActor}</div>
+                              
+                              <div className="text-sm text-gray-500">Rôle:</div>
+                              <div>{formatRole(actor.role)}</div>
+                              
+                              <div className="text-sm text-gray-500">Organisation:</div>
+                              <div>{actor.numeroOrg}</div>
+                              
+                              <div className="text-sm text-gray-500">État:</div>
+                              <div>
+                                {actor.etatRequest === 'PENDING' && "En attente"}
+                                {actor.etatRequest === 'ACCEPTED' && "Acceptée"}
+                                {actor.etatRequest === 'REJECTED' && "Rejetée"}
+                              </div>
+                            </div>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        ) : (
+          <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {healthActors.map((actor) => (
-              <TableRow key={actor.id} className="hover:bg-gray-50">
-                <TableCell className="font-medium">{actor.healthActorId}</TableCell>
-                <TableCell>
-                  {actor.prenom ? `${actor.nom} ${actor.prenom}` : actor.nom}
-                </TableCell>
-                <TableCell>{actor.matriculeActor}</TableCell>
-                <TableCell>{formatRole(actor.role)}</TableCell>
-                <TableCell>{actor.numeroOrg}</TableCell>
-                <TableCell>
-                  {actor.etatRequest === 'PENDING' && (
-                    <Badge variant="outline" className="bg-yellow-50 text-yellow-700 hover:bg-yellow-50">
-                      En attente
-                    </Badge>
-                  )}
+              <Card 
+                key={actor.id} 
+                className={`overflow-hidden transition-all duration-300 hover:shadow-md ${
+                  actor.isNew ? 'animate-fade-in' : ''
+                } ${
+                  actor.hasStateChanged ? 'ring-2 ring-red-400' : ''
+                }`}
+              >
+                <CardHeader className={`${getRoleColor(actor.role)} pb-2`}>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="text-lg">
+                        {actor.prenom ? `${actor.nom} ${actor.prenom}` : actor.nom}
+                      </CardTitle>
+                      <CardDescription className="text-gray-700 mt-1">
+                        {formatRole(actor.role)}
+                      </CardDescription>
+                    </div>
+                    {actor.hasStateChanged && (
+                      <span className="relative flex h-3 w-3 animate-pulse">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                      </span>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">ID Requête:</span>
+                      <span className="font-medium">{actor.requestId}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Matricule:</span>
+                      <span>{actor.matriculeActor}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Organisation:</span>
+                      <span>{actor.numeroOrg}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-500">État:</span>
+                      <Badge className={getStatusColor(actor.etatRequest)}>
+                        {actor.etatRequest === 'PENDING' && "En attente"}
+                        {actor.etatRequest === 'ACCEPTED' && "Acceptée"}
+                        {actor.etatRequest === 'REJECTED' && "Rejetée"}
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter className="flex justify-end gap-2 pt-0">
                   {actor.etatRequest === 'ACCEPTED' && (
-                    <Badge variant="outline" className="bg-green-50 text-green-700 hover:bg-green-50">
-                      Acceptée
-                    </Badge>
-                  )}
-                  {actor.etatRequest === 'REJECTED' && (
-                    <Badge variant="outline" className="bg-red-50 text-red-700 hover:bg-red-50">
-                      Rejetée
-                    </Badge>
-                  )}
-                </TableCell>
-                <TableCell className="flex justify-end gap-2">
-                  {/* Affichage conditionnel des boutons selon l'état */}
-                  {actor.etatRequest === 'PENDING' && (
-                    <>
-                      <Button 
-                        variant="outline" 
-                        size="icon" 
-                        className="h-8 w-8" 
-                        onClick={() => handleAcceptRequest(actor.id)}
-                      >
-                        <Check className="h-4 w-4 text-green-600" />
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => handleRejectRequest(actor.id)}
-                      >
-                        <X className="h-4 w-4 text-red-600" />
-                      </Button>
-                    </>
-                  )}
-                  
-                  {actor.etatRequest === 'ACCEPTED' && (
-                    <Button 
+                    <Button
                       variant="outline"
-                      className="h-8 text-xs"
+                      size="sm"
+                      className="transition-all hover:bg-green-50 hover:text-green-700 hover:border-green-300"
                       onClick={() => handleCreateCryptoMaterial(actor)}
                     >
                       Créer Crypto
                     </Button>
                   )}
-                  
-                  {actor.etatRequest === 'REJECTED' && (
-                    <Button 
-                      variant="outline" 
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => handleDeleteRequest(actor.id)}
-                    >
-                      <TrashIcon className="h-4 w-4 text-red-600" />
-                    </Button>
-                  )}
-                  
-                  {/* Détails de l'acteur */}
                   <Dialog>
                     <DialogTrigger asChild>
                       <Button variant="outline" size="icon" className="h-8 w-8">
                         <Eye className="h-4 w-4" />
                       </Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent className="sm:max-w-md">
                       <DialogHeader>
-                        <DialogTitle>Détails de l'acteur de santé</DialogTitle>
+                        <DialogTitle>Détails de la requête d'acteur de santé</DialogTitle>
                       </DialogHeader>
                       <div className="space-y-4 mt-4">
                         <div className="grid grid-cols-2 gap-2">
@@ -351,11 +485,11 @@ export function HealthActorList() {
                       </div>
                     </DialogContent>
                   </Dialog>
-                </TableCell>
-              </TableRow>
+                </CardFooter>
+              </Card>
             ))}
-          </TableBody>
-        </Table>
+          </div>
+        )}
       </div>
       
       {/* Formulaire de création de matériel cryptographique */}

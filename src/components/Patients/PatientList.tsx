@@ -1,4 +1,5 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -9,7 +10,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Eye, Edit, TrashIcon, Check, X } from 'lucide-react';
+import { Eye, TrashIcon, Check, X, Bell } from 'lucide-react';
 import { 
   Dialog, 
   DialogContent, 
@@ -20,6 +21,7 @@ import {
 import { useToast } from '@/components/ui/use-toast';
 import { CryptoMaterialForm } from '@/components/Shared/CryptoMaterialForm';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast as sonnerToast } from "@/components/ui/use-toast";
 
 // Types
 interface Patient {
@@ -31,6 +33,8 @@ interface Patient {
   ehrid: string;
   matricule: string;
   numeroOrganisation: string;
+  hasStateChanged?: boolean; // Track if state has changed
+  isNew?: boolean; // Track if this is a new entry
 }
 
 export function PatientList() {
@@ -40,100 +44,101 @@ export function PatientList() {
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   
   // État pour stocker les patients (données fictives pour démo)
-  const [patients, setPatients] = useState<Patient[]>([
-    {
-      id: '1',
-      requestId: 'REQ001',
-      patientId: 'PAT001',
-      name: 'Jean Dupont',
-      etatRequest: 'PENDING',
-      ehrid: 'EHR001',
-      matricule: 'MAT001',
-      numeroOrganisation: 'HCA',
-    },
-    {
-      id: '2',
-      requestId: 'REQ002',
-      patientId: 'PAT002',
-      name: 'Marie Martin',
-      etatRequest: 'ACCEPTED',
-      ehrid: 'EHR002',
-      matricule: 'MAT002',
-      numeroOrganisation: 'HCA',
-    },
-    {
-      id: '3',
-      requestId: 'REQ003',
-      patientId: 'PAT003',
-      name: 'Pierre Durand',
-      etatRequest: 'REJECTED',
-      ehrid: 'EHR003',
-      matricule: 'MAT003',
-      numeroOrganisation: 'HQA',
-    },
-    {
-      id: '4',
-      requestId: 'REQ004',
-      patientId: 'PAT004',
-      name: 'Sophie Lefebvre',
-      etatRequest: 'PENDING',
-      ehrid: 'EHR004',
-      matricule: 'MAT004',
-      numeroOrganisation: 'HQA',
-    },
-  ]);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [prevPatients, setPrevPatients] = useState<Record<string, Patient>>({});
+
+  useEffect(() => {
+    // Simulate fetching data from the blockchain API
+    const fetchPatients = async () => {
+      // Mock data - in a real app, this would be an API call to blockchain
+      const mockPatients = [
+        {
+          id: '1',
+          requestId: 'REQ001',
+          patientId: 'PAT001',
+          name: 'Jean Dupont',
+          etatRequest: 'PENDING',
+          ehrid: 'EHR001',
+          matricule: 'MAT001',
+          numeroOrganisation: 'HCA',
+        },
+        {
+          id: '2',
+          requestId: 'REQ002',
+          patientId: 'PAT002',
+          name: 'Marie Martin',
+          etatRequest: 'ACCEPTED',
+          ehrid: 'EHR002',
+          matricule: 'MAT002',
+          numeroOrganisation: 'HCA',
+        },
+        {
+          id: '3',
+          requestId: 'REQ003',
+          patientId: 'PAT003',
+          name: 'Pierre Durand',
+          etatRequest: 'REJECTED',
+          ehrid: 'EHR003',
+          matricule: 'MAT003',
+          numeroOrganisation: 'HQA',
+        },
+        {
+          id: '4',
+          requestId: 'REQ004',
+          patientId: 'PAT004',
+          name: 'Sophie Lefebvre',
+          etatRequest: 'PENDING',
+          ehrid: 'EHR004',
+          matricule: 'MAT004',
+          numeroOrganisation: 'HQA',
+        },
+      ] as Patient[];
+
+      // Compare with previous state to detect changes
+      const newPatients = mockPatients.map(patient => {
+        const prevPatient = prevPatients[patient.id];
+        
+        // Check if this is a new patient or if state has changed
+        const isNew = !prevPatient;
+        const hasStateChanged = prevPatient && prevPatient.etatRequest !== patient.etatRequest;
+        
+        // If state has changed, show a notification
+        if (hasStateChanged) {
+          sonnerToast({
+            title: "État de requête modifié",
+            description: `La requête ${patient.requestId} est passée à l'état ${
+              patient.etatRequest === 'ACCEPTED' ? 'acceptée' : 
+              patient.etatRequest === 'REJECTED' ? 'rejetée' : 'en attente'
+            }`,
+          });
+        }
+        
+        return {
+          ...patient,
+          hasStateChanged,
+          isNew
+        };
+      });
+      
+      setPatients(newPatients);
+      
+      // Update previous patients state for next comparison
+      const newPrevPatients: Record<string, Patient> = {};
+      mockPatients.forEach(patient => {
+        newPrevPatients[patient.id] = { ...patient };
+      });
+      setPrevPatients(newPrevPatients);
+    };
+
+    fetchPatients();
+    
+    // Set up a polling interval to simulate real-time updates
+    const interval = setInterval(fetchPatients, 30000); // Check every 30 seconds
+    
+    return () => clearInterval(interval);
+  }, []);
 
   // Simuler des appels API
-  const handleAcceptRequest = (patientId: string) => {
-    setPatients(
-      patients.map(patient => 
-        patient.id === patientId 
-          ? { ...patient, etatRequest: 'ACCEPTED' as const } 
-          : patient
-      )
-    );
-    toast({
-      title: "Demande acceptée",
-      description: "La demande a été acceptée avec succès",
-    });
-    
-    // Simuler l'enregistrement de l'acceptation dans la blockchain
-    const patientToUpdate = patients.find(p => p.id === patientId);
-    if (patientToUpdate) {
-      console.log("Enregistrement dans la blockchain - Acceptation:", {
-        requestId: patientToUpdate.requestId,
-        patientId: patientToUpdate.patientId,
-        action: "ACCEPTED",
-        timestamp: new Date().toISOString()
-      });
-    }
-  };
-
-  const handleRejectRequest = (patientId: string) => {
-    setPatients(
-      patients.map(patient => 
-        patient.id === patientId 
-          ? { ...patient, etatRequest: 'REJECTED' as const } 
-          : patient
-      )
-    );
-    toast({
-      title: "Demande rejetée",
-      description: "La demande a été rejetée",
-    });
-    
-    // Simuler l'enregistrement du rejet dans la blockchain
-    const patientToUpdate = patients.find(p => p.id === patientId);
-    if (patientToUpdate) {
-      console.log("Enregistrement dans la blockchain - Rejet:", {
-        requestId: patientToUpdate.requestId,
-        patientId: patientToUpdate.patientId,
-        action: "REJECTED",
-        timestamp: new Date().toISOString()
-      });
-    }
-  };
-
   const handleCreateCryptoMaterial = (patient: Patient) => {
     // Ouvrir le formulaire de création de matériel crypto
     setSelectedPatient(patient);
@@ -175,39 +180,31 @@ export function PatientList() {
       description: "Matériel cryptographique créé et identifiants enregistrés",
       variant: "default",
     });
-  };
-
-  const handleDeleteRequest = (patientId: string) => {
-    // Simuler l'enregistrement de la suppression dans la blockchain
-    const patientToDelete = patients.find(p => p.id === patientId);
-    if (patientToDelete) {
-      console.log("Enregistrement dans la blockchain - Suppression:", {
-        requestId: patientToDelete.requestId,
-        patientId: patientToDelete.patientId,
-        action: "DELETED",
-        timestamp: new Date().toISOString()
-      });
-    }
     
-    // Simulation de suppression
-    setPatients(patients.filter(patient => patient.id !== patientId));
-    toast({
-      title: "Demande supprimée",
-      description: "La demande a été supprimée avec succès",
-    });
+    // Mettre à jour l'état local pour indiquer que le matériel a été créé
+    setPatients(prevState => 
+      prevState.map(patient => 
+        patient.id === selectedPatient.id 
+          ? { ...patient, hasCryptoMaterial: true }
+          : patient
+      )
+    );
   };
 
   return (
     <div className="bg-white rounded-md shadow">
       <div className="p-4 border-b">
-        <h2 className="text-lg font-medium">Liste des patients</h2>
+        <h2 className="text-lg font-medium">Liste des requêtes de patients</h2>
+        <p className="text-sm text-gray-500 mt-1">
+          Les requêtes sont récupérées depuis la blockchain et leur état est géré par une entité externe
+        </p>
       </div>
       
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="bg-gray-50">
-              <TableHead>ID Patient</TableHead>
+              <TableHead>ID Requête</TableHead>
               <TableHead>Nom</TableHead>
               <TableHead>EHRID</TableHead>
               <TableHead>Matricule</TableHead>
@@ -218,8 +215,19 @@ export function PatientList() {
           </TableHeader>
           <TableBody>
             {patients.map((patient) => (
-              <TableRow key={patient.id} className="hover:bg-gray-50">
-                <TableCell className="font-medium">{patient.patientId}</TableCell>
+              <TableRow 
+                key={patient.id} 
+                className={`hover:bg-gray-50 ${patient.isNew ? 'animate-fade-in' : ''}`}
+              >
+                <TableCell className="font-medium flex items-center gap-2">
+                  {patient.requestId}
+                  {patient.hasStateChanged && (
+                    <span className="relative flex h-3 w-3 animate-pulse">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                    </span>
+                  )}
+                </TableCell>
                 <TableCell>{patient.name}</TableCell>
                 <TableCell>{patient.ehrid}</TableCell>
                 <TableCell>{patient.matricule}</TableCell>
@@ -242,46 +250,14 @@ export function PatientList() {
                   )}
                 </TableCell>
                 <TableCell className="flex justify-end gap-2">
-                  {/* Affichage conditionnel des boutons selon l'état */}
-                  {patient.etatRequest === 'PENDING' && (
-                    <>
-                      <Button 
-                        variant="outline" 
-                        size="icon" 
-                        className="h-8 w-8" 
-                        onClick={() => handleAcceptRequest(patient.id)}
-                      >
-                        <Check className="h-4 w-4 text-green-600" />
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => handleRejectRequest(patient.id)}
-                      >
-                        <X className="h-4 w-4 text-red-600" />
-                      </Button>
-                    </>
-                  )}
-                  
+                  {/* Affichage du bouton Créer CryptoMatériel uniquement pour les requêtes acceptées */}
                   {patient.etatRequest === 'ACCEPTED' && (
                     <Button 
                       variant="outline"
-                      className="h-8 text-xs"
+                      className="h-8 text-xs transition-all hover:bg-green-50 hover:text-green-700 hover:border-green-300"
                       onClick={() => handleCreateCryptoMaterial(patient)}
                     >
                       Créer Crypto
-                    </Button>
-                  )}
-                  
-                  {patient.etatRequest === 'REJECTED' && (
-                    <Button 
-                      variant="outline" 
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => handleDeleteRequest(patient.id)}
-                    >
-                      <TrashIcon className="h-4 w-4 text-red-600" />
                     </Button>
                   )}
                   
@@ -292,9 +268,9 @@ export function PatientList() {
                         <Eye className="h-4 w-4" />
                       </Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent className="sm:max-w-md">
                       <DialogHeader>
-                        <DialogTitle>Détails du patient</DialogTitle>
+                        <DialogTitle>Détails de la requête patient</DialogTitle>
                       </DialogHeader>
                       <div className="space-y-4 mt-4">
                         <div className="grid grid-cols-2 gap-2">
