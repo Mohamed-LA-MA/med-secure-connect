@@ -52,6 +52,19 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
+				// Palette de couleurs médicales
+				medical: {
+					primary: '#1976D2',      // Bleu médical principal
+					secondary: '#03A9F4',    // Bleu clair
+					tertiary: '#4ECDC4',     // Turquoise
+					accent: '#5BC8AC',       // Vert apaisant
+					light: '#E3F2FD',        // Bleu très clair
+					dark: '#0D47A1',         // Bleu foncé
+					gray: '#F5F7FA',         // Gris clair
+					warning: '#FFB74D',      // Orange d'alerte
+					danger: '#ef5350',       // Rouge d'erreur
+					success: '#66BB6A',      // Vert de succès
+				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',
