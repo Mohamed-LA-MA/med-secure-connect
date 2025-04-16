@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 // Types
 type Organization = 'HCA' | 'HQA';
@@ -23,32 +23,63 @@ interface AuthContextType {
 // Create context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Récupération des utilisateurs du localStorage
+const getStoredUsers = (): Record<string, { password: string, user: User }> => {
+  const storedUsers = localStorage.getItem('medSecureUsers');
+  return storedUsers ? JSON.parse(storedUsers) : {};
+};
+
 // Context provider component
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [organization, setOrganization] = useState<Organization | null>(null);
 
-  // Fake authentication function
+  // Fonction pour ajouter un nouvel utilisateur
+  const addUser = (email: string, password: string, newUser: User) => {
+    const users = getStoredUsers();
+    users[email] = { password, user: newUser };
+    localStorage.setItem('medSecureUsers', JSON.stringify(users));
+  };
+
+  // À l'initialisation, on crée les utilisateurs admin par défaut s'ils n'existent pas
+  useEffect(() => {
+    const users = getStoredUsers();
+    
+    // Création des utilisateurs admin par défaut s'ils n'existent pas
+    if (!users['admin@HCA.com']) {
+      addUser('admin@HCA.com', 'admin', {
+        id: 'admin1',
+        email: 'admin@HCA.com',
+        name: 'Admin HCA',
+        role: 'admin',
+        organization: 'HCA',
+      });
+    }
+    
+    if (!users['admin@HQA.com']) {
+      addUser('admin@HQA.com', 'admin', {
+        id: 'admin2',
+        email: 'admin@HQA.com',
+        name: 'Admin HQA',
+        role: 'admin',
+        organization: 'HQA',
+      });
+    }
+  }, []);
+
+  // Fonction d'authentification
   const login = async (email: string, password: string, org: Organization): Promise<boolean> => {
-    // For demo purposes, check hardcoded admin credentials
-    if (
-      (email === 'admin@HCA.com' && password === 'admin' && org === 'HCA') ||
-      (email === 'admin@HQA.com' && password === 'admin' && org === 'HQA')
-    ) {
-      // Create user object for admin
-      const newUser = {
-        id: '1',
-        email,
-        name: `Admin ${org}`,
-        role: 'admin' as const,
-        organization: org,
-      };
+    const users = getStoredUsers();
+    
+    // Vérification si l'email existe et si le mot de passe correspond
+    if (users[email] && users[email].password === password && users[email].user.organization === org) {
+      const loggedInUser = users[email].user;
       
-      setUser(newUser);
+      setUser(loggedInUser);
       setOrganization(org);
       
-      // Save to local storage for persistence
-      localStorage.setItem('medSecureUser', JSON.stringify(newUser));
+      // Sauvegarde dans le localStorage
+      localStorage.setItem('medSecureUser', JSON.stringify(loggedInUser));
       localStorage.setItem('medSecureOrg', org);
       
       return true;
@@ -64,8 +95,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('medSecureOrg');
   };
 
-  // Check for existing user on mount
-  React.useEffect(() => {
+  // Vérification s'il existe un utilisateur connecté
+  useEffect(() => {
     const storedUser = localStorage.getItem('medSecureUser');
     const storedOrg = localStorage.getItem('medSecureOrg') as Organization | null;
     
@@ -90,11 +121,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// Hook for using auth context
+// Hook pour utiliser le contexte d'authentification
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
+}
+
+// Fonction exportée pour ajouter un nouvel utilisateur (utilisée par les composants)
+export function addNewUser(email: string, password: string, userData: User) {
+  const users = getStoredUsers();
+  users[email] = { password, user: userData };
+  localStorage.setItem('medSecureUsers', JSON.stringify(users));
 }

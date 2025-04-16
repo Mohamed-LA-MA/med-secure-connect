@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
 import { CryptoMaterialForm } from '@/components/Shared/CryptoMaterialForm';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Types
 interface HealthActor {
@@ -35,6 +36,7 @@ interface HealthActor {
 
 export function HealthActorList() {
   const { toast } = useToast();
+  const { organization } = useAuth();
   const [cryptoFormOpen, setCryptoFormOpen] = useState(false);
   const [selectedActor, setSelectedActor] = useState<HealthActor | null>(null);
   
@@ -312,6 +314,8 @@ export function HealthActorList() {
           onConfirm={handleCryptoConfirm}
           entityName={selectedActor.prenom ? `${selectedActor.nom} ${selectedActor.prenom}` : selectedActor.nom}
           entityId={selectedActor.healthActorId}
+          entityRole="healthActor"
+          entityOrg={selectedActor.numeroOrg as 'HCA' | 'HQA'}
         />
       )}
     </div>

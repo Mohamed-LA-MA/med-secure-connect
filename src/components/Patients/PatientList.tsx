@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import {
   Table,
@@ -20,6 +19,7 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
 import { CryptoMaterialForm } from '@/components/Shared/CryptoMaterialForm';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Types
 interface Patient {
@@ -35,6 +35,7 @@ interface Patient {
 
 export function PatientList() {
   const { toast } = useToast();
+  const { organization } = useAuth();
   const [cryptoFormOpen, setCryptoFormOpen] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   
@@ -291,6 +292,8 @@ export function PatientList() {
           onConfirm={handleCryptoConfirm}
           entityName={selectedPatient.name}
           entityId={selectedPatient.patientId}
+          entityRole="patient"
+          entityOrg={selectedPatient.numeroOrganisation as 'HCA' | 'HQA'}
         />
       )}
     </div>

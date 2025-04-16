@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import { addNewUser } from '@/contexts/AuthContext';
 
 interface CryptoMaterialFormProps {
   open: boolean;
@@ -20,6 +21,8 @@ interface CryptoMaterialFormProps {
   onConfirm: (email: string, password: string) => void;
   entityName: string;
   entityId: string;
+  entityRole?: 'patient' | 'healthActor';
+  entityOrg?: 'HCA' | 'HQA';
 }
 
 export function CryptoMaterialForm({ 
@@ -27,7 +30,9 @@ export function CryptoMaterialForm({
   onClose, 
   onConfirm,
   entityName,
-  entityId
+  entityId,
+  entityRole = 'patient',
+  entityOrg = 'HCA'
 }: CryptoMaterialFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -49,12 +54,21 @@ export function CryptoMaterialForm({
     setIsLoading(true);
     
     try {
+      // Ajouter l'utilisateur dans le système d'authentification
+      addNewUser(email, password, {
+        id: entityId,
+        email: email,
+        name: entityName,
+        role: entityRole,
+        organization: entityOrg,
+      });
+      
       // Appel de la fonction de confirmation fournie par le parent
       await onConfirm(email, password);
       
       toast({
         title: "Succès",
-        description: "Matériel cryptographique créé avec succès",
+        description: "Matériel cryptographique créé avec succès. L'utilisateur peut maintenant se connecter.",
       });
       
       // Réinitialiser le formulaire et fermer
