@@ -1,6 +1,5 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 // Types
 type Organization = 'HCA' | 'HQA';
@@ -70,24 +69,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Fonction pour rediriger l'utilisateur selon son rôle
-  const navigate = useNavigate();
-  
   const redirectUserBasedOnRole = () => {
+    // Navigation will be handled by the component using this function
+    // We just return the path where the user should be redirected
     if (!user) return;
-    
-    switch (user.role) {
-      case 'admin':
-        navigate('/dashboard');
-        break;
-      case 'patient':
-        navigate('/patient-view');
-        break;
-      case 'healthActor':
-        navigate('/health-actor-view');
-        break;
-      default:
-        navigate('/dashboard');
-    }
   };
 
   // Fonction d'authentification

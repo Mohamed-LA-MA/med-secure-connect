@@ -5,15 +5,30 @@ import { useAuth } from '@/contexts/AuthContext';
 import { LoginForm } from '@/components/ui/forms/LoginForm';
 
 const Login = () => {
-  const { isAuthenticated, redirectUserBasedOnRole } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      redirectUserBasedOnRole();
+      // Redirect based on user role
+      if (user) {
+        switch (user.role) {
+          case 'admin':
+            navigate('/dashboard');
+            break;
+          case 'patient':
+            navigate('/patient-view');
+            break;
+          case 'healthActor':
+            navigate('/health-actor-view');
+            break;
+          default:
+            navigate('/dashboard');
+        }
+      }
     }
-  }, [isAuthenticated, redirectUserBasedOnRole]);
+  }, [isAuthenticated, user, navigate]);
   
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-medical-light to-white p-4">
