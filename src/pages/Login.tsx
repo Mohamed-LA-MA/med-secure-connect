@@ -5,15 +5,15 @@ import { useAuth } from '@/contexts/AuthContext';
 import { LoginForm } from '@/components/ui/forms/LoginForm';
 
 const Login = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, redirectUserBasedOnRole } = useAuth();
   const navigate = useNavigate();
   
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/dashboard');
+      redirectUserBasedOnRole();
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, redirectUserBasedOnRole]);
   
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-medical-light to-white p-4">

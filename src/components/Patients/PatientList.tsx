@@ -96,6 +96,17 @@ export function PatientList() {
       title: "Demande acceptée",
       description: "La demande a été acceptée avec succès",
     });
+    
+    // Simuler l'enregistrement de l'acceptation dans la blockchain
+    const patientToUpdate = patients.find(p => p.id === patientId);
+    if (patientToUpdate) {
+      console.log("Enregistrement dans la blockchain - Acceptation:", {
+        requestId: patientToUpdate.requestId,
+        patientId: patientToUpdate.patientId,
+        action: "ACCEPTED",
+        timestamp: new Date().toISOString()
+      });
+    }
   };
 
   const handleRejectRequest = (patientId: string) => {
@@ -110,6 +121,17 @@ export function PatientList() {
       title: "Demande rejetée",
       description: "La demande a été rejetée",
     });
+    
+    // Simuler l'enregistrement du rejet dans la blockchain
+    const patientToUpdate = patients.find(p => p.id === patientId);
+    if (patientToUpdate) {
+      console.log("Enregistrement dans la blockchain - Rejet:", {
+        requestId: patientToUpdate.requestId,
+        patientId: patientToUpdate.patientId,
+        action: "REJECTED",
+        timestamp: new Date().toISOString()
+      });
+    }
   };
 
   const handleCreateCryptoMaterial = (patient: Patient) => {
@@ -119,27 +141,54 @@ export function PatientList() {
   };
 
   const handleCryptoConfirm = async (email: string, password: string) => {
+    if (!selectedPatient) return;
+    
+    // Simuler l'enregistrement du matériel cryptographique dans la blockchain
+    console.log("Enregistrement du matériel cryptographique dans la blockchain:", {
+      patientId: selectedPatient.patientId,
+      email: email,
+      timestamp: new Date().toISOString()
+    });
+    
     // Simulation d'un appel API pour créer le matériel cryptographique
     // et enregistrer les identifiants
     await new Promise(resolve => setTimeout(resolve, 1500)); // Simulation de délai
+    
+    // Enregistrer dans la base de données locale (localStorage) les infos complètes du patient
+    const patientProfile = {
+      id: selectedPatient.patientId,
+      name: selectedPatient.name,
+      email: email,
+      ehrid: selectedPatient.ehrid,
+      matricule: selectedPatient.matricule,
+      organization: selectedPatient.numeroOrganisation,
+      createdAt: new Date().toISOString()
+    };
+    
+    // Stocker le profil complet du patient
+    const patientProfiles = JSON.parse(localStorage.getItem('medSecurePatientProfiles') || '{}');
+    patientProfiles[selectedPatient.patientId] = patientProfile;
+    localStorage.setItem('medSecurePatientProfiles', JSON.stringify(patientProfiles));
     
     toast({
       title: "Succès",
       description: "Matériel cryptographique créé et identifiants enregistrés",
       variant: "default",
     });
-    
-    console.log("Identifiants créés:", { 
-      email, 
-      password, 
-      patientId: selectedPatient?.patientId 
-    });
-    
-    // Ici vous feriez un appel API réel pour enregistrer les identifiants
-    // axios.post('/api/crypto-material', { email, password, patientId: selectedPatient?.patientId });
   };
 
   const handleDeleteRequest = (patientId: string) => {
+    // Simuler l'enregistrement de la suppression dans la blockchain
+    const patientToDelete = patients.find(p => p.id === patientId);
+    if (patientToDelete) {
+      console.log("Enregistrement dans la blockchain - Suppression:", {
+        requestId: patientToDelete.requestId,
+        patientId: patientToDelete.patientId,
+        action: "DELETED",
+        timestamp: new Date().toISOString()
+      });
+    }
+    
     // Simulation de suppression
     setPatients(patients.filter(patient => patient.id !== patientId));
     toast({

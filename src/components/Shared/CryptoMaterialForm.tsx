@@ -54,6 +54,16 @@ export function CryptoMaterialForm({
     setIsLoading(true);
     
     try {
+      // Simuler l'enregistrement dans la blockchain
+      console.log("Enregistrement dans la blockchain:", {
+        entityId,
+        entityName,
+        entityRole,
+        entityOrg,
+        timestamp: new Date().toISOString()
+      });
+      await new Promise(resolve => setTimeout(resolve, 800)); // Simulation délai blockchain
+      
       // Ajouter l'utilisateur dans le système d'authentification
       addNewUser(email, password, {
         id: entityId,
@@ -62,6 +72,22 @@ export function CryptoMaterialForm({
         role: entityRole,
         organization: entityOrg,
       });
+      
+      // Simuler l'enregistrement dans la base de données
+      const profileData = {
+        id: entityId,
+        name: entityName,
+        email: email,
+        role: entityRole,
+        organization: entityOrg,
+        createdAt: new Date().toISOString()
+      };
+      
+      // Sauvegarder les données du profil dans le localStorage
+      const profilesKey = entityRole === 'patient' ? 'medSecurePatientProfiles' : 'medSecureHealthActorProfiles';
+      const profiles = JSON.parse(localStorage.getItem(profilesKey) || '{}');
+      profiles[entityId] = profileData;
+      localStorage.setItem(profilesKey, JSON.stringify(profiles));
       
       // Appel de la fonction de confirmation fournie par le parent
       await onConfirm(email, password);

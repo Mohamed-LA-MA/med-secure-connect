@@ -1,5 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 // Types
 type Organization = 'HCA' | 'HQA';
@@ -18,6 +19,7 @@ interface AuthContextType {
   login: (email: string, password: string, organization: Organization) => Promise<boolean>;
   logout: () => void;
   isAuthenticated: boolean;
+  redirectUserBasedOnRole: () => void;
 }
 
 // Create context
@@ -67,6 +69,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Fonction pour rediriger l'utilisateur selon son rôle
+  const navigate = useNavigate();
+  
+  const redirectUserBasedOnRole = () => {
+    if (!user) return;
+    
+    switch (user.role) {
+      case 'admin':
+        navigate('/dashboard');
+        break;
+      case 'patient':
+        navigate('/patient-view');
+        break;
+      case 'healthActor':
+        navigate('/health-actor-view');
+        break;
+      default:
+        navigate('/dashboard');
+    }
+  };
+
   // Fonction d'authentification
   const login = async (email: string, password: string, org: Organization): Promise<boolean> => {
     const users = getStoredUsers();
@@ -114,6 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         logout,
         isAuthenticated: !!user,
+        redirectUserBasedOnRole
       }}
     >
       {children}
