@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import {
   Table,
@@ -19,6 +18,7 @@ import {
   DialogTrigger 
 } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
+import { CryptoMaterialForm } from '@/components/Shared/CryptoMaterialForm';
 
 // Types
 interface HealthActor {
@@ -35,6 +35,8 @@ interface HealthActor {
 
 export function HealthActorList() {
   const { toast } = useToast();
+  const [cryptoFormOpen, setCryptoFormOpen] = useState(false);
+  const [selectedActor, setSelectedActor] = useState<HealthActor | null>(null);
   
   // État pour stocker les acteurs de santé (données fictives pour démo)
   const [healthActors, setHealthActors] = useState<HealthActor[]>([
@@ -113,21 +115,32 @@ export function HealthActorList() {
     });
   };
 
-  const handleCreateCryptoMaterial = (actorId: string) => {
-    // Simulation d'un appel API
+  const handleCreateCryptoMaterial = (actor: HealthActor) => {
+    // Ouvrir le formulaire de création de matériel crypto
+    setSelectedActor(actor);
+    setCryptoFormOpen(true);
+  };
+
+  const handleCryptoConfirm = async (email: string, password: string) => {
+    // Simulation d'un appel API pour créer le matériel cryptographique
+    // et enregistrer les identifiants
+    await new Promise(resolve => setTimeout(resolve, 1500)); // Simulation de délai
+    
     toast({
-      title: "Matériel cryptographique",
-      description: "Création du matériel cryptographique en cours...",
+      title: "Succès",
+      description: "Matériel cryptographique créé et identifiants enregistrés",
+      variant: "default",
     });
     
-    // Simuler la réponse après un délai
-    setTimeout(() => {
-      toast({
-        title: "Succès",
-        description: "Matériel cryptographique créé avec succès",
-        variant: "default",
-      });
-    }, 1500);
+    console.log("Identifiants créés:", { 
+      email, 
+      password, 
+      actorId: selectedActor?.healthActorId,
+      role: selectedActor?.role
+    });
+    
+    // Ici vous feriez un appel API réel pour enregistrer les identifiants
+    // axios.post('/api/crypto-material', { email, password, actorId: selectedActor?.healthActorId });
   };
 
   const handleDeleteRequest = (actorId: string) => {
@@ -223,7 +236,7 @@ export function HealthActorList() {
                     <Button 
                       variant="outline"
                       className="h-8 text-xs"
-                      onClick={() => handleCreateCryptoMaterial(actor.id)}
+                      onClick={() => handleCreateCryptoMaterial(actor)}
                     >
                       Créer Crypto
                     </Button>
@@ -290,6 +303,17 @@ export function HealthActorList() {
           </TableBody>
         </Table>
       </div>
+      
+      {/* Formulaire de création de matériel cryptographique */}
+      {selectedActor && (
+        <CryptoMaterialForm
+          open={cryptoFormOpen}
+          onClose={() => setCryptoFormOpen(false)}
+          onConfirm={handleCryptoConfirm}
+          entityName={selectedActor.prenom ? `${selectedActor.nom} ${selectedActor.prenom}` : selectedActor.nom}
+          entityId={selectedActor.healthActorId}
+        />
+      )}
     </div>
   );
 }

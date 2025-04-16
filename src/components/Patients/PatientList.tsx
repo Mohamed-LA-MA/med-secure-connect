@@ -19,6 +19,7 @@ import {
   DialogTrigger 
 } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
+import { CryptoMaterialForm } from '@/components/Shared/CryptoMaterialForm';
 
 // Types
 interface Patient {
@@ -34,6 +35,9 @@ interface Patient {
 
 export function PatientList() {
   const { toast } = useToast();
+  const [cryptoFormOpen, setCryptoFormOpen] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  
   // État pour stocker les patients (données fictives pour démo)
   const [patients, setPatients] = useState<Patient[]>([
     {
@@ -107,21 +111,31 @@ export function PatientList() {
     });
   };
 
-  const handleCreateCryptoMaterial = (patientId: string) => {
-    // Simulation d'un appel API
+  const handleCreateCryptoMaterial = (patient: Patient) => {
+    // Ouvrir le formulaire de création de matériel crypto
+    setSelectedPatient(patient);
+    setCryptoFormOpen(true);
+  };
+
+  const handleCryptoConfirm = async (email: string, password: string) => {
+    // Simulation d'un appel API pour créer le matériel cryptographique
+    // et enregistrer les identifiants
+    await new Promise(resolve => setTimeout(resolve, 1500)); // Simulation de délai
+    
     toast({
-      title: "Matériel cryptographique",
-      description: "Création du matériel cryptographique en cours...",
+      title: "Succès",
+      description: "Matériel cryptographique créé et identifiants enregistrés",
+      variant: "default",
     });
     
-    // Simuler la réponse après un délai
-    setTimeout(() => {
-      toast({
-        title: "Succès",
-        description: "Matériel cryptographique créé avec succès",
-        variant: "default",
-      });
-    }, 1500);
+    console.log("Identifiants créés:", { 
+      email, 
+      password, 
+      patientId: selectedPatient?.patientId 
+    });
+    
+    // Ici vous feriez un appel API réel pour enregistrer les identifiants
+    // axios.post('/api/crypto-material', { email, password, patientId: selectedPatient?.patientId });
   };
 
   const handleDeleteRequest = (patientId: string) => {
@@ -204,7 +218,7 @@ export function PatientList() {
                     <Button 
                       variant="outline"
                       className="h-8 text-xs"
-                      onClick={() => handleCreateCryptoMaterial(patient.id)}
+                      onClick={() => handleCreateCryptoMaterial(patient)}
                     >
                       Créer Crypto
                     </Button>
@@ -268,6 +282,17 @@ export function PatientList() {
           </TableBody>
         </Table>
       </div>
+      
+      {/* Formulaire de création de matériel cryptographique */}
+      {selectedPatient && (
+        <CryptoMaterialForm
+          open={cryptoFormOpen}
+          onClose={() => setCryptoFormOpen(false)}
+          onConfirm={handleCryptoConfirm}
+          entityName={selectedPatient.name}
+          entityId={selectedPatient.patientId}
+        />
+      )}
     </div>
   );
 }

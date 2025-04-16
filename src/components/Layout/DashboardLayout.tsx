@@ -23,7 +23,7 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user, organization, logout, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Sidebar fermée par défaut en mobile
 
   // Protect the route
   useEffect(() => {
@@ -94,9 +94,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Sidebar - Desktop always visible, Mobile conditionally visible */}
       <div className={cn(
         "bg-white w-64 shadow-md transition-all duration-300 ease-in-out",
-        "flex-shrink-0 h-screen sticky top-0 overflow-y-auto",
-        "md:block", // Always visible on desktop
-        sidebarOpen ? "fixed inset-y-0 left-0 z-50" : "hidden" // Conditional on mobile
+        "flex-shrink-0 h-screen overflow-y-auto z-50",
+        "md:sticky md:top-0",
+        "fixed inset-y-0 left-0",
+        sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
       )}>
         <div className="p-6">
           <div className="flex items-center justify-between">
@@ -161,12 +162,17 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-4 md:p-8 overflow-auto">
-        {/* Page title will be different on each page */}
-        <div className="mb-6">
-          {children}
-        </div>
+      <div className="flex-1 p-4 md:p-8 overflow-auto md:ml-0">
+        {children}
       </div>
+
+      {/* Overlay pour fermer le sidebar quand on clique ailleurs sur mobile */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/20 z-40 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
     </div>
   );
 }
