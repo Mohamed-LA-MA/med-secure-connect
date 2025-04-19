@@ -115,7 +115,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <div className="mt-6 border-t pt-4">
             <div className="text-sm text-gray-500 mb-2">Organisation</div>
             <div className="px-3 py-2 bg-medical-light rounded-md font-medium text-medical-primary">
-              {organization}
+              {organization?.name || "Non défini"}
             </div>
           </div>
           

@@ -32,7 +32,7 @@ const Dashboard = () => {
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-medical-dark">Tableau de bord</h1>
-          <p className="text-gray-600">Bienvenue sur votre espace d'administration {organization}</p>
+          <p className="text-gray-600">Bienvenue sur votre espace d'administration {organization?.name || "Non défini"}</p>
         </div>
 
         {/* Statistiques principales */}

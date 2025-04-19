@@ -48,7 +48,7 @@ const Stats = () => {
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-medical-dark">Statistiques et Analytics</h1>
-          <p className="text-gray-600">Données et informations sur les activités de {organization}</p>
+          <p className="text-gray-600">Données et informations sur les activités de {organization?.name || "Non défini"}</p>
         </div>
 
         {/* Graphique d'évolution mensuelle */}

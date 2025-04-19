@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { addNewUser } from '@/contexts/AuthContext';
+import { addNewUser, Organization } from '@/contexts/AuthContext';
 
 interface CryptoMaterialFormProps {
   open: boolean;
@@ -22,7 +22,7 @@ interface CryptoMaterialFormProps {
   entityName: string;
   entityId: string;
   entityRole?: 'patient' | 'healthActor';
-  entityOrg?: 'HCA' | 'HQA';
+  entityOrg?: string;
 }
 
 export function CryptoMaterialForm({ 
@@ -64,13 +64,21 @@ export function CryptoMaterialForm({
       });
       await new Promise(resolve => setTimeout(resolve, 800)); // Simulation délai blockchain
       
+      // Convert string entityOrg to Organization object
+      const organizationObject: Organization = 
+        entityOrg === 'HCA' 
+          ? { name: 'Hôpital HCA', code: 'org2' } 
+          : entityOrg === 'HQA' 
+            ? { name: 'Hôpital HQA', code: 'org3' } 
+            : { name: 'Unknown', code: 'unknown' };
+      
       // Ajouter l'utilisateur dans le système d'authentification
       addNewUser(email, password, {
         id: entityId,
         email: email,
         name: entityName,
         role: entityRole,
-        organization: entityOrg,
+        organization: organizationObject,
       });
       
       // Simuler l'enregistrement dans la base de données
@@ -79,7 +87,7 @@ export function CryptoMaterialForm({
         name: entityName,
         email: email,
         role: entityRole,
-        organization: entityOrg,
+        organization: organizationObject,
         createdAt: new Date().toISOString()
       };
       
