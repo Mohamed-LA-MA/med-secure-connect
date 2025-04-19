@@ -122,8 +122,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const storedOrg = localStorage.getItem('medSecureOrg');
     
     if (storedUser && storedOrg) {
-      setUser(JSON.parse(storedUser));
-      setOrganization(JSON.parse(storedOrg));
+      try {
+        setUser(JSON.parse(storedUser));
+        setOrganization(JSON.parse(storedOrg));
+      } catch (error) {
+        console.error("Error parsing stored user data:", error);
+        // Clear invalid storage data
+        localStorage.removeItem('medSecureUser');
+        localStorage.removeItem('medSecureOrg');
+      }
     }
   }, []);
 
