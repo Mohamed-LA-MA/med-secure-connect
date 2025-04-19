@@ -10,11 +10,24 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { BlockchainService, API_CONFIG } from '@/services/BlockchainService';
 import axios from 'axios';
+
+// Mappage des organisations pour le backend
+const orgMapping = {
+  HCA: { orgId: "org2", peer: "peer0.org2.example.com", admin: "hospitalAdmin1" },
+  HQA: { orgId: "org3", peer: "peer0.org3.example.com", admin: "hospitalAdmin2" }
+};
 
 export function AddPatientForm() {
   const { organization } = useAuth();
@@ -23,6 +36,7 @@ export function AddPatientForm() {
   
   // États du formulaire
   const [patientData, setPatientData] = useState({
+    patientID: '',
     name: '',
     ehrid: '',
     matricule: '',
@@ -37,6 +51,10 @@ export function AddPatientForm() {
     }));
   };
 
+  const generateRequestId = () => {
+    return `REQ_PAT_${Date.now()}`;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -48,24 +66,31 @@ export function AddPatientForm() {
         throw new Error("Impossible d'obtenir le token d'authentification");
       }
       
-      // Générer des IDs uniques
-      const requestId = `REQ_PAT_${Date.now()}`;
-      const patientId = `PAT_${Date.now()}`;
+      // Obtenir la configuration de l'organisation
+      const orgConfig = orgMapping[patientData.numeroOrganisation as 'HCA' | 'HQA'];
+      if (!orgConfig) {
+        throw new Error("Configuration d'organisation invalide");
+      }
+      
+      // Générer un ID de requête unique
+      const requestId = generateRequestId();
       
       // Préparer les arguments pour l'appel API
       const requestData = {
         fcn: "RequestPatient",
         args: [
-          "adminUser", // requesterID (utilisez un ID approprié)
+          orgConfig.admin, // requesterID dynamique
           requestId,
-          patientId,
+          patientData.patientID,
           patientData.name,
           patientData.ehrid,
           patientData.matricule,
-          patientData.numeroOrganisation
+          orgConfig.orgId  // org2/org3 selon l'organisation
         ],
-        peers: [`peer0.${patientData.numeroOrganisation}.example.com`]
+        peers: [`peer0.${orgConfig.orgId}.example.com`]
       };
+      
+      console.log("📤 Données envoyées:", requestData);
       
       // Envoyer la requête
       const response = await axios.post(
@@ -86,8 +111,29 @@ export function AddPatientForm() {
           description: "La demande d'ajout de patient a été envoyée avec succès",
         });
         
+        // Créer les identifiants utilisateur
+        try {
+          await BlockchainService.createPatientCredentials(
+            patientData.patientID,
+            patientData.numeroOrganisation
+          );
+          
+          toast({
+            title: "Identifiants créés",
+            description: "Les identifiants du patient ont été créés avec succès",
+          });
+        } catch (credError) {
+          console.error("⚠️ Erreur lors de la création des identifiants:", credError);
+          toast({
+            title: "Avertissement",
+            description: "Patient ajouté mais erreur lors de la création des identifiants",
+            variant: "destructive",
+          });
+        }
+        
         // Réinitialiser le formulaire
         setPatientData({
+          patientID: '',
           name: '',
           ehrid: '',
           matricule: '',
@@ -119,6 +165,18 @@ export function AddPatientForm() {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
+            <Label htmlFor="patientID">Patient ID</Label>
+            <Input
+              id="patientID"
+              name="patientID"
+              placeholder="PAT000"
+              value={patientData.patientID}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          
+          <div className="space-y-2">
             <Label htmlFor="name">Nom complet</Label>
             <Input
               id="name"
@@ -131,11 +189,12 @@ export function AddPatientForm() {
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="ehrid">EHRID</Label>
+            <Label htmlFor="ehrid">EHRID (nombre)</Label>
             <Input
               id="ehrid"
               name="ehrid"
-              placeholder="EHR000"
+              type="number"
+              placeholder="123456"
               value={patientData.ehrid}
               onChange={handleChange}
               required
@@ -143,11 +202,12 @@ export function AddPatientForm() {
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="matricule">Matricule</Label>
+            <Label htmlFor="matricule">Matricule (nombre)</Label>
             <Input
               id="matricule"
               name="matricule"
-              placeholder="MAT000"
+              type="number"
+              placeholder="987654"
               value={patientData.matricule}
               onChange={handleChange}
               required

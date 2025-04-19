@@ -23,6 +23,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { BlockchainService, API_CONFIG } from '@/services/BlockchainService';
 import axios from 'axios';
 
+// Mappage des organisations pour le backend
+const orgMapping = {
+  HCA: { orgId: "org2", peer: "peer0.org2.example.com", admin: "hospitalAdmin1" },
+  HQA: { orgId: "org3", peer: "peer0.org3.example.com", admin: "hospitalAdmin2" }
+};
+
 export function AddHealthActorForm() {
   const { organization } = useAuth();
   const { toast } = useToast();
@@ -30,6 +36,7 @@ export function AddHealthActorForm() {
   
   // États du formulaire
   const [actorData, setActorData] = useState({
+    healthActorID: '',
     nom: '',
     prenom: '',
     matriculeActor: '',
@@ -50,6 +57,10 @@ export function AddHealthActorForm() {
       ...prev,
       [name]: value
     }));
+  };
+
+  const generateRequestId = () => {
+    return `REQ_HA_${Date.now()}`;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -73,25 +84,32 @@ export function AddHealthActorForm() {
         throw new Error("Impossible d'obtenir le token d'authentification");
       }
       
-      // Générer des IDs uniques
-      const requestId = `REQ_HA_${Date.now()}`;
-      const healthActorId = `HA_${Date.now()}`;
+      // Obtenir la configuration de l'organisation
+      const orgConfig = orgMapping[actorData.numeroOrg as 'HCA' | 'HQA'];
+      if (!orgConfig) {
+        throw new Error("Configuration d'organisation invalide");
+      }
+      
+      // Générer un ID de requête unique
+      const requestId = generateRequestId();
       
       // Préparer les arguments pour l'appel API
       const requestData = {
         fcn: "RequestHealthActor",
         args: [
-          "adminUser", // requesterID (utilisez un ID approprié)
+          orgConfig.admin, // requesterID dynamique
           requestId,
-          healthActorId,
+          actorData.healthActorID,
           actorData.nom,
           actorData.prenom,
           actorData.matriculeActor,
-          actorData.numeroOrg,
+          orgConfig.orgId, // org2/org3 selon l'organisation
           actorData.role
         ],
-        peers: [`peer0.${actorData.numeroOrg}.example.com`]
+        peers: [`peer0.${orgConfig.orgId}.example.com`]
       };
+      
+      console.log("📤 Données envoyées:", requestData);
       
       // Envoyer la requête
       const response = await axios.post(
@@ -112,8 +130,29 @@ export function AddHealthActorForm() {
           description: "La demande d'ajout d'acteur de santé a été envoyée avec succès",
         });
         
+        // Créer les identifiants utilisateur
+        try {
+          await BlockchainService.createHealthActorCredentials(
+            actorData.healthActorID,
+            actorData.numeroOrg
+          );
+          
+          toast({
+            title: "Identifiants créés",
+            description: "Les identifiants de l'acteur de santé ont été créés avec succès",
+          });
+        } catch (credError) {
+          console.error("⚠️ Erreur lors de la création des identifiants:", credError);
+          toast({
+            title: "Avertissement",
+            description: "Acteur ajouté mais erreur lors de la création des identifiants",
+            variant: "destructive",
+          });
+        }
+        
         // Réinitialiser le formulaire
         setActorData({
+          healthActorID: '',
           nom: '',
           prenom: '',
           matriculeActor: '',
@@ -146,6 +185,18 @@ export function AddHealthActorForm() {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
+            <Label htmlFor="healthActorID">Health Actor ID</Label>
+            <Input
+              id="healthActorID"
+              name="healthActorID"
+              placeholder="HA000"
+              value={actorData.healthActorID}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          
+          <div className="space-y-2">
             <Label htmlFor="nom">Nom</Label>
             <Input
               id="nom"
@@ -158,22 +209,24 @@ export function AddHealthActorForm() {
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="prenom">Prénom (optionnel pour les institutions)</Label>
+            <Label htmlFor="prenom">Prénom</Label>
             <Input
               id="prenom"
               name="prenom"
               placeholder="Marie"
               value={actorData.prenom}
               onChange={handleChange}
+              required
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="matriculeActor">Matricule</Label>
+            <Label htmlFor="matriculeActor">Matricule (nombre)</Label>
             <Input
               id="matriculeActor"
               name="matriculeActor"
-              placeholder="MED000"
+              type="number"
+              placeholder="123456"
               value={actorData.matriculeActor}
               onChange={handleChange}
               required
@@ -190,7 +243,8 @@ export function AddHealthActorForm() {
                 <SelectValue placeholder="Sélectionnez un rôle" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="MEDECIN">Médecin</SelectItem>
+                <SelectItem value="DOCTOR">Médecin</SelectItem>
+                <SelectItem value="NURSE">Infirmier(ère)</SelectItem>
                 <SelectItem value="LABORATOIRE">Laboratoire</SelectItem>
                 <SelectItem value="CENTRE_IMAGERIE">Centre d'imagerie</SelectItem>
                 <SelectItem value="ASSURANCE">Assurance</SelectItem>

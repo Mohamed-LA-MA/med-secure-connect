@@ -10,6 +10,12 @@ export const API_CONFIG = {
   CHAINCODE_HEALTH_AUTHORITY: 'healthauthority'
 };
 
+// Mappage des organisations
+export const ORG_MAPPING = {
+  HCA: { orgId: "org2", peer: "peer0.org2.example.com", admin: "hospitalAdmin1", orgName: "Org2" },
+  HQA: { orgId: "org3", peer: "peer0.org3.example.com", admin: "hospitalAdmin2", orgName: "Org3" }
+};
+
 // Types pour les requêtes
 export interface PatientRequest {
   id?: string;
@@ -172,50 +178,104 @@ export class BlockchainService {
     }
   }
 
-  // Fonction pour créer un crypto matériel pour un patient
-  static async createPatientCryptoMaterial(patientId: string, email: string, password: string): Promise<boolean> {
+  // Fonction pour générer un mot de passe sécurisé
+  private static generateSecurePassword(length = 10): string {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()";
+    let password = "";
+    for (let i = 0; i < length; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+  }
+
+  // Fonction pour créer des identifiants pour un patient
+  static async createPatientCredentials(patientId: string, organization: string): Promise<boolean> {
     try {
       const authToken = await this.getAdminToken();
       if (!authToken) {
         throw new Error("Impossible d'obtenir le token d'authentification");
       }
 
-      console.log("🔹 Création du matériel cryptographique pour le patient...");
+      console.log("🔹 Création des identifiants pour le patient...");
       
-      // Ici, nous simulons l'appel à l'API blockchain pour créer le crypto matériel
-      // Dans un environnement réel, cela serait un appel à l'API appropriée
-      console.log("Données envoyées:", { patientId, email, password });
+      const orgConfig = ORG_MAPPING[organization as 'HCA' | 'HQA'];
+      if (!orgConfig) {
+        throw new Error("Configuration d'organisation invalide");
+      }
       
-      // Simulation de délai réseau
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Formatage des identifiants
+      const username = `${patientId}@${organization.toLowerCase()}.health`;
+      const password = this.generateSecurePassword();
+      
+      console.log(`📝 Identifiants générés - Username: ${username}`);
+      
+      // Ici, nous simulons l'appel à l'API d'enregistrement
+      // Dans un environnement réel, nous ferions un appel API
+      console.log("🔹 Enregistrement de l'utilisateur...");
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulation de délai
+      
+      // Stockage des identifiants (simule l'accès à une base de données)
+      console.log("🔹 Stockage des identifiants...");
+      const credentials = {
+        entityId: patientId,
+        username,
+        password,
+        organization,
+        createdAt: new Date().toISOString()
+      };
+      
+      // Dans une implémentation réelle, nous sauvegarderions ces informations dans une base de données
+      console.log("✅ Identifiants créés avec succès:", { entityId: patientId, username });
       
       return true;
     } catch (error: any) {
-      console.error("❌ Erreur lors de la création du matériel cryptographique:", error);
+      console.error("❌ Erreur lors de la création des identifiants:", error);
       return false;
     }
   }
 
-  // Fonction pour créer un crypto matériel pour un acteur de santé
-  static async createHealthActorCryptoMaterial(actorId: string, email: string, password: string): Promise<boolean> {
+  // Fonction pour créer des identifiants pour un acteur de santé
+  static async createHealthActorCredentials(actorId: string, organization: string): Promise<boolean> {
     try {
       const authToken = await this.getAdminToken();
       if (!authToken) {
         throw new Error("Impossible d'obtenir le token d'authentification");
       }
 
-      console.log("🔹 Création du matériel cryptographique pour l'acteur de santé...");
+      console.log("🔹 Création des identifiants pour l'acteur de santé...");
       
-      // Ici, nous simulons l'appel à l'API blockchain pour créer le crypto matériel
-      // Dans un environnement réel, cela serait un appel à l'API appropriée
-      console.log("Données envoyées:", { actorId, email, password });
+      const orgConfig = ORG_MAPPING[organization as 'HCA' | 'HQA'];
+      if (!orgConfig) {
+        throw new Error("Configuration d'organisation invalide");
+      }
       
-      // Simulation de délai réseau
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Formatage des identifiants
+      const username = `${actorId}@${organization.toLowerCase()}.health`;
+      const password = this.generateSecurePassword();
+      
+      console.log(`📝 Identifiants générés - Username: ${username}`);
+      
+      // Ici, nous simulons l'appel à l'API d'enregistrement
+      // Dans un environnement réel, nous ferions un appel API
+      console.log("🔹 Enregistrement de l'utilisateur...");
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulation de délai
+      
+      // Stockage des identifiants (simule l'accès à une base de données)
+      console.log("🔹 Stockage des identifiants...");
+      const credentials = {
+        entityId: actorId,
+        username,
+        password,
+        organization,
+        createdAt: new Date().toISOString()
+      };
+      
+      // Dans une implémentation réelle, nous sauvegarderions ces informations dans une base de données
+      console.log("✅ Identifiants créés avec succès:", { entityId: actorId, username });
       
       return true;
     } catch (error: any) {
-      console.error("❌ Erreur lors de la création du matériel cryptographique:", error);
+      console.error("❌ Erreur lors de la création des identifiants:", error);
       return false;
     }
   }
