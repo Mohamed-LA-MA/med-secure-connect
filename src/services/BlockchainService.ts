@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 
 // Configuration de l'API blockchain
@@ -69,8 +68,61 @@ export class BlockchainService {
       return null;
     }
   }
+  
+  // Fonction pour se connecter avec un compte administrateur spécifique
+  static async loginAdmin(username: string, orgName: string): Promise<string | null> {
+    try {
+      console.log(`🔹 Connexion de l'admin ${username} en cours...`);
+      
+      const loginResponse = await axios.post(`${API_CONFIG.BASE_URL}/users/login`, {
+        username: username,
+        orgName: orgName
+      });
+      
+      if (loginResponse.data.success) {
+        console.log(`✅ Admin ${username} connecté avec succès`);
+        const token = loginResponse.data.message.token;
+        console.log('Token JWT de l\'admin:', token);
+        return token;
+      } else {
+        console.log(`❌ Échec de la connexion de l'admin : ${loginResponse.data.message}`);
+        return null;
+      }
+    } catch (error: any) {
+      console.error('❌ Erreur lors de la connexion de l\'admin:', error.response?.data || error.message);
+      return null;
+    }
+  }
+  
+  // Fonction pour enregistrer un nouvel utilisateur
+  static async registerUser(token: string, username: string, orgName: string): Promise<boolean> {
+    try {
+      console.log(`🔹 Enregistrement de l'utilisateur ${username} dans ${orgName}...`);
+      
+      const response = await axios.post(`${API_CONFIG.BASE_URL}/users`, {
+        username: username,
+        orgName: orgName
+      }, {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      });
+      
+      if (response.data.success) {
+        console.log(`✅ Utilisateur ${username} enregistré avec succès dans ${orgName}`);
+        return true;
+      } else {
+        console.log(`❌ Échec de l'enregistrement : ${response.data.message}`);
+        return false;
+      }
+    } catch (error: any) {
+      console.error('❌ Erreur lors de l\'enregistrement de l\'utilisateur:', error.response?.data || error.message);
+      return false;
+    }
+  }
 
-  // Fonction pour récupérer les requêtes de patients depuis la blockchain
+  // Récupérer les requêtes de patients depuis la blockchain
   static async getPatientRequests(organization?: string): Promise<PatientRequest[]> {
     try {
       const authToken = await this.getAdminToken();
@@ -124,7 +176,7 @@ export class BlockchainService {
     }
   }
 
-  // Fonction pour récupérer les requêtes d'acteurs de santé depuis la blockchain
+  // Récupérer les requêtes d'acteurs de santé depuis la blockchain
   static async getHealthActorRequests(organization?: string): Promise<HealthActorRequest[]> {
     try {
       const authToken = await this.getAdminToken();
@@ -191,11 +243,6 @@ export class BlockchainService {
   // Fonction pour créer des identifiants pour un patient
   static async createPatientCredentials(patientId: string, organization: string): Promise<boolean> {
     try {
-      const authToken = await this.getAdminToken();
-      if (!authToken) {
-        throw new Error("Impossible d'obtenir le token d'authentification");
-      }
-
       console.log("🔹 Création des identifiants pour le patient...");
       
       const orgConfig = ORG_MAPPING[organization as 'HCA' | 'HQA'];
@@ -209,10 +256,17 @@ export class BlockchainService {
       
       console.log(`📝 Identifiants générés - Username: ${username}`);
       
-      // Ici, nous simulons l'appel à l'API d'enregistrement
-      // Dans un environnement réel, nous ferions un appel API
-      console.log("🔹 Enregistrement de l'utilisateur...");
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulation de délai
+      // Appel à l'API d'enregistrement blockchain
+      const adminToken = await this.loginAdmin("admin", orgConfig.orgName);
+      if (!adminToken) {
+        throw new Error("Impossible d'obtenir le token d'authentification admin");
+      }
+      
+      // Enregistrer l'utilisateur dans la blockchain
+      const registrationSuccess = await this.registerUser(adminToken, username, orgConfig.orgName);
+      if (!registrationSuccess) {
+        throw new Error("Échec de l'enregistrement de l'utilisateur dans la blockchain");
+      }
       
       // Stockage des identifiants (simule l'accès à une base de données)
       console.log("🔹 Stockage des identifiants...");
@@ -225,6 +279,11 @@ export class BlockchainService {
       };
       
       // Dans une implémentation réelle, nous sauvegarderions ces informations dans une base de données
+      // Pour la démo, on utilise localStorage
+      const patientCredentials = JSON.parse(localStorage.getItem('medSecurePatientCredentials') || '{}');
+      patientCredentials[patientId] = credentials;
+      localStorage.setItem('medSecurePatientCredentials', JSON.stringify(patientCredentials));
+      
       console.log("✅ Identifiants créés avec succès:", { entityId: patientId, username });
       
       return true;
@@ -234,14 +293,63 @@ export class BlockchainService {
     }
   }
 
+  // Fonction pour créer des identifiants cryptographiques pour un patient
+  static async createPatientCryptoMaterial(patientId: string, email: string, password: string): Promise<boolean> {
+    try {
+      console.log("🔹 Création du matériel cryptographique pour le patient...");
+      
+      // Récupérer les informations du patient depuis la base de données locale
+      const patientRequests = await this.getPatientRequests();
+      const patient = patientRequests.find(p => p.patientId === patientId);
+      
+      if (!patient) {
+        throw new Error("Patient non trouvé");
+      }
+      
+      const orgConfig = ORG_MAPPING[patient.numeroOrganisation as 'HCA' | 'HQA'];
+      if (!orgConfig) {
+        throw new Error("Configuration d'organisation invalide");
+      }
+      
+      // Appel à l'API d'enregistrement blockchain
+      const adminToken = await this.loginAdmin("admin", orgConfig.orgName);
+      if (!adminToken) {
+        throw new Error("Impossible d'obtenir le token d'authentification admin");
+      }
+      
+      // Enregistrer l'utilisateur dans la blockchain avec l'email fourni par l'utilisateur
+      const registrationSuccess = await this.registerUser(adminToken, email, orgConfig.orgName);
+      if (!registrationSuccess) {
+        throw new Error("Échec de l'enregistrement de l'utilisateur dans la blockchain");
+      }
+      
+      // Stockage des identifiants (simule l'accès à une base de données)
+      console.log("🔹 Stockage des identifiants...");
+      const credentials = {
+        entityId: patientId,
+        username: email,
+        password: password,
+        organization: patient.numeroOrganisation,
+        createdAt: new Date().toISOString()
+      };
+      
+      // Pour la démo, on utilise localStorage
+      const patientCredentials = JSON.parse(localStorage.getItem('medSecurePatientCredentials') || '{}');
+      patientCredentials[patientId] = credentials;
+      localStorage.setItem('medSecurePatientCredentials', JSON.stringify(patientCredentials));
+      
+      console.log("✅ Matériel cryptographique créé avec succès:", { entityId: patientId, username: email });
+      
+      return true;
+    } catch (error: any) {
+      console.error("❌ Erreur lors de la création du matériel cryptographique:", error);
+      return false;
+    }
+  }
+
   // Fonction pour créer des identifiants pour un acteur de santé
   static async createHealthActorCredentials(actorId: string, organization: string): Promise<boolean> {
     try {
-      const authToken = await this.getAdminToken();
-      if (!authToken) {
-        throw new Error("Impossible d'obtenir le token d'authentification");
-      }
-
       console.log("🔹 Création des identifiants pour l'acteur de santé...");
       
       const orgConfig = ORG_MAPPING[organization as 'HCA' | 'HQA'];
@@ -255,10 +363,17 @@ export class BlockchainService {
       
       console.log(`📝 Identifiants générés - Username: ${username}`);
       
-      // Ici, nous simulons l'appel à l'API d'enregistrement
-      // Dans un environnement réel, nous ferions un appel API
-      console.log("🔹 Enregistrement de l'utilisateur...");
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulation de délai
+      // Appel à l'API d'enregistrement blockchain
+      const adminToken = await this.loginAdmin("admin", orgConfig.orgName);
+      if (!adminToken) {
+        throw new Error("Impossible d'obtenir le token d'authentification admin");
+      }
+      
+      // Enregistrer l'utilisateur dans la blockchain
+      const registrationSuccess = await this.registerUser(adminToken, username, orgConfig.orgName);
+      if (!registrationSuccess) {
+        throw new Error("Échec de l'enregistrement de l'utilisateur dans la blockchain");
+      }
       
       // Stockage des identifiants (simule l'accès à une base de données)
       console.log("🔹 Stockage des identifiants...");
@@ -276,6 +391,60 @@ export class BlockchainService {
       return true;
     } catch (error: any) {
       console.error("❌ Erreur lors de la création des identifiants:", error);
+      return false;
+    }
+  }
+
+  // Fonction pour créer des identifiants cryptographiques pour un acteur de santé
+  static async createHealthActorCryptoMaterial(actorId: string, email: string, password: string): Promise<boolean> {
+    try {
+      console.log("🔹 Création du matériel cryptographique pour l'acteur de santé...");
+      
+      // Récupérer les informations de l'acteur depuis la base de données locale
+      const actorRequests = await this.getHealthActorRequests();
+      const actor = actorRequests.find(a => a.healthActorId === actorId);
+      
+      if (!actor) {
+        throw new Error("Acteur de santé non trouvé");
+      }
+      
+      const orgConfig = ORG_MAPPING[actor.numeroOrg as 'HCA' | 'HQA'];
+      if (!orgConfig) {
+        throw new Error("Configuration d'organisation invalide");
+      }
+      
+      // Appel à l'API d'enregistrement blockchain
+      const adminToken = await this.loginAdmin("admin", orgConfig.orgName);
+      if (!adminToken) {
+        throw new Error("Impossible d'obtenir le token d'authentification admin");
+      }
+      
+      // Enregistrer l'utilisateur dans la blockchain avec l'email fourni par l'utilisateur
+      const registrationSuccess = await this.registerUser(adminToken, email, orgConfig.orgName);
+      if (!registrationSuccess) {
+        throw new Error("Échec de l'enregistrement de l'utilisateur dans la blockchain");
+      }
+      
+      // Stockage des identifiants (simule l'accès à une base de données)
+      console.log("🔹 Stockage des identifiants...");
+      const credentials = {
+        entityId: actorId,
+        username: email,
+        password: password,
+        organization: actor.numeroOrg,
+        createdAt: new Date().toISOString()
+      };
+      
+      // Pour la démo, on utilise localStorage
+      const actorCredentials = JSON.parse(localStorage.getItem('medSecureHealthActorCredentials') || '{}');
+      actorCredentials[actorId] = credentials;
+      localStorage.setItem('medSecureHealthActorCredentials', JSON.stringify(actorCredentials));
+      
+      console.log("✅ Matériel cryptographique créé avec succès:", { entityId: actorId, username: email });
+      
+      return true;
+    } catch (error: any) {
+      console.error("❌ Erreur lors de la création du matériel cryptographique:", error);
       return false;
     }
   }
