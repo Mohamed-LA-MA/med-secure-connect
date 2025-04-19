@@ -20,6 +20,9 @@ export interface PatientRequest {
   ehrid: string;
   numeroOrganisation: string;
   etatRequest: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+  // Additional properties for UI state
+  isNew?: boolean;
+  hasStateChanged?: boolean;
 }
 
 export interface HealthActorRequest {
@@ -32,6 +35,9 @@ export interface HealthActorRequest {
   numeroOrg: string;
   role: string; 
   etatRequest: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+  // Additional properties for UI state
+  isNew?: boolean;
+  hasStateChanged?: boolean;
 }
 
 // Classe de service pour interagir avec la blockchain

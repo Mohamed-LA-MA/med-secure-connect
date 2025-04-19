@@ -2,7 +2,10 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 // Types
-type Organization = 'HCA' | 'HQA';
+export interface Organization {
+  name: string;
+  code: string; // Adding the code property
+}
 
 export interface User {
   id: string;
@@ -15,7 +18,7 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   organization: Organization | null;
-  login: (email: string, password: string, organization: Organization) => Promise<boolean>;
+  login: (email: string, password: string, organization: string) => Promise<boolean>;
   logout: () => void;
   isAuthenticated: boolean;
   redirectUserBasedOnRole: () => void;
@@ -28,6 +31,16 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const getStoredUsers = (): Record<string, { password: string, user: User }> => {
   const storedUsers = localStorage.getItem('medSecureUsers');
   return storedUsers ? JSON.parse(storedUsers) : {};
+};
+
+// Helper function to convert string organization to Organization object
+const getOrganizationObject = (org: string): Organization => {
+  if (org === 'HCA') {
+    return { name: 'Hôpital HCA', code: 'org2' };
+  } else if (org === 'HQA') {
+    return { name: 'Hôpital HQA', code: 'org3' };
+  }
+  return { name: 'Unknown', code: 'unknown' };
 };
 
 // Context provider component
@@ -53,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: 'admin@HCA.com',
         name: 'Admin HCA',
         role: 'admin',
-        organization: 'HCA',
+        organization: { name: 'Hôpital HCA', code: 'org2' },
       });
     }
     
@@ -63,7 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: 'admin@HQA.com',
         name: 'Admin HQA',
         role: 'admin',
-        organization: 'HQA',
+        organization: { name: 'Hôpital HQA', code: 'org3' },
       });
     }
   }, []);
@@ -76,19 +89,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   // Fonction d'authentification
-  const login = async (email: string, password: string, org: Organization): Promise<boolean> => {
+  const login = async (email: string, password: string, org: string): Promise<boolean> => {
     const users = getStoredUsers();
     
     // Vérification si l'email existe et si le mot de passe correspond
-    if (users[email] && users[email].password === password && users[email].user.organization === org) {
+    if (users[email] && users[email].password === password && users[email].user.organization.name.includes(org)) {
       const loggedInUser = users[email].user;
       
       setUser(loggedInUser);
-      setOrganization(org);
+      setOrganization(loggedInUser.organization);
       
       // Sauvegarde dans le localStorage
       localStorage.setItem('medSecureUser', JSON.stringify(loggedInUser));
-      localStorage.setItem('medSecureOrg', org);
+      localStorage.setItem('medSecureOrg', JSON.stringify(loggedInUser.organization));
       
       return true;
     }
@@ -106,11 +119,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Vérification s'il existe un utilisateur connecté
   useEffect(() => {
     const storedUser = localStorage.getItem('medSecureUser');
-    const storedOrg = localStorage.getItem('medSecureOrg') as Organization | null;
+    const storedOrg = localStorage.getItem('medSecureOrg');
     
     if (storedUser && storedOrg) {
       setUser(JSON.parse(storedUser));
-      setOrganization(storedOrg);
+      setOrganization(JSON.parse(storedOrg));
     }
   }, []);
 

@@ -20,6 +20,8 @@ import {
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { BlockchainService, API_CONFIG } from '@/services/BlockchainService';
+import axios from 'axios';
 
 export function AddHealthActorForm() {
   const { organization } = useAuth();
@@ -32,7 +34,7 @@ export function AddHealthActorForm() {
     prenom: '',
     matriculeActor: '',
     role: '',
-    numeroOrg: organization || '',
+    numeroOrg: organization?.code || '',
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -64,29 +66,68 @@ export function AddHealthActorForm() {
     
     setIsLoading(true);
     
-    // Simulation d'un appel API pour ajouter un acteur de santé
     try {
-      // Attendre 1.5 secondes pour simuler l'appel API
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Obtenir le token d'authentification
+      const authToken = await BlockchainService.getAdminToken();
+      if (!authToken) {
+        throw new Error("Impossible d'obtenir le token d'authentification");
+      }
       
-      // Simuler un succès
-      toast({
-        title: "Acteur de santé ajouté",
-        description: "La demande d'ajout d'acteur de santé a été envoyée avec succès",
-      });
+      // Générer des IDs uniques
+      const requestId = `REQ_HA_${Date.now()}`;
+      const healthActorId = `HA_${Date.now()}`;
       
-      // Réinitialiser le formulaire
-      setActorData({
-        nom: '',
-        prenom: '',
-        matriculeActor: '',
-        role: '',
-        numeroOrg: organization || '',
-      });
-    } catch (error) {
+      // Préparer les arguments pour l'appel API
+      const requestData = {
+        fcn: "RequestHealthActor",
+        args: [
+          "adminUser", // requesterID (utilisez un ID approprié)
+          requestId,
+          healthActorId,
+          actorData.nom,
+          actorData.prenom,
+          actorData.matriculeActor,
+          actorData.numeroOrg,
+          actorData.role
+        ],
+        peers: [`peer0.${actorData.numeroOrg}.example.com`]
+      };
+      
+      // Envoyer la requête
+      const response = await axios.post(
+        `${API_CONFIG.BASE_URL}/channels/${API_CONFIG.CHANNEL}/chaincodes/${API_CONFIG.CHAINCODE_HEALTH_ACTOR}`,
+        requestData,
+        {
+          headers: {
+            "Authorization": `Bearer ${authToken}`,
+            "Content-Type": "application/json"
+          }
+        }
+      );
+      
+      // Vérifier la réponse
+      if (response.data && response.data.success) {
+        toast({
+          title: "Acteur de santé ajouté",
+          description: "La demande d'ajout d'acteur de santé a été envoyée avec succès",
+        });
+        
+        // Réinitialiser le formulaire
+        setActorData({
+          nom: '',
+          prenom: '',
+          matriculeActor: '',
+          role: '',
+          numeroOrg: organization?.code || '',
+        });
+      } else {
+        throw new Error(response.data?.message || "Échec de l'ajout de l'acteur de santé");
+      }
+    } catch (error: any) {
+      console.error("❌ Erreur:", error);
       toast({
         title: "Erreur",
-        description: "Une erreur s'est produite lors de l'ajout de l'acteur de santé",
+        description: error.message || "Une erreur s'est produite lors de l'ajout de l'acteur de santé",
         variant: "destructive",
       });
     } finally {
@@ -167,7 +208,7 @@ export function AddHealthActorForm() {
               disabled
             />
             <p className="text-xs text-gray-500">
-              L'organisation est définie automatiquement selon votre compte
+              L'organisation est définie automatiquement selon votre compte ({organization?.name})
             </p>
           </div>
           
