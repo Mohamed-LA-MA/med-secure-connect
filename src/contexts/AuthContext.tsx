@@ -51,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Fonction pour ajouter un nouvel utilisateur
   const addUser = (email: string, password: string, newUser: User) => {
     const users = getStoredUsers();
-    users[email] = { password, user: newUser };
+    users[email.toLowerCase()] = { password, user: newUser };
     localStorage.setItem('medSecureUsers', JSON.stringify(users));
   };
 
@@ -60,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const users = getStoredUsers();
     
     // Création des utilisateurs admin par défaut s'ils n'existent pas
-    if (!users['admin@HCA.com']) {
+    if (!users['admin@hca.com']) {
       addUser('admin@HCA.com', 'admin', {
         id: 'admin1',
         email: 'admin@HCA.com',
@@ -70,7 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     }
     
-    if (!users['admin@HQA.com']) {
+    if (!users['admin@hqa.com']) {
       addUser('admin@HQA.com', 'admin', {
         id: 'admin2',
         email: 'admin@HQA.com',
@@ -90,20 +90,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Fonction d'authentification
   const login = async (email: string, password: string, org: string): Promise<boolean> => {
+    console.log("Login attempt:", { email, password, org });
     const users = getStoredUsers();
+    const normalizedEmail = email.toLowerCase();
     
-    // Vérification si l'email existe et si le mot de passe correspond
-    if (users[email] && users[email].password === password && users[email].user.organization.name.includes(org)) {
-      const loggedInUser = users[email].user;
+    // Log des utilisateurs disponibles pour le débogage
+    console.log("Available users:", Object.keys(users));
+    
+    // Vérification si l'email existe
+    if (users[normalizedEmail]) {
+      console.log("User found:", users[normalizedEmail]);
       
-      setUser(loggedInUser);
-      setOrganization(loggedInUser.organization);
-      
-      // Sauvegarde dans le localStorage
-      localStorage.setItem('medSecureUser', JSON.stringify(loggedInUser));
-      localStorage.setItem('medSecureOrg', JSON.stringify(loggedInUser.organization));
-      
-      return true;
+      // Vérifier le mot de passe
+      if (users[normalizedEmail].password === password) {
+        console.log("Password correct");
+        
+        // Vérifier l'organisation
+        const userOrg = users[normalizedEmail].user.organization.name;
+        const selectedOrg = org === 'HCA' ? 'Hôpital HCA' : 'Hôpital HQA';
+        
+        console.log("User org:", userOrg, "Selected org:", selectedOrg);
+        
+        if (userOrg.includes(selectedOrg)) {
+          console.log("Organization valid");
+          const loggedInUser = users[normalizedEmail].user;
+          
+          setUser(loggedInUser);
+          setOrganization(loggedInUser.organization);
+          
+          // Sauvegarde dans le localStorage
+          localStorage.setItem('medSecureUser', JSON.stringify(loggedInUser));
+          localStorage.setItem('medSecureOrg', JSON.stringify(loggedInUser.organization));
+          
+          return true;
+        } else {
+          console.log("Organization mismatch");
+        }
+      } else {
+        console.log("Password incorrect");
+      }
+    } else {
+      console.log("User not found with email:", normalizedEmail);
     }
     
     return false;
@@ -162,6 +189,6 @@ export function useAuth() {
 // Fonction exportée pour ajouter un nouvel utilisateur (utilisée par les composants)
 export function addNewUser(email: string, password: string, userData: User) {
   const users = getStoredUsers();
-  users[email] = { password, user: userData };
+  users[email.toLowerCase()] = { password, user: userData };
   localStorage.setItem('medSecureUsers', JSON.stringify(users));
 }
