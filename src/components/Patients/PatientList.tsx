@@ -10,14 +10,13 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Eye, Search, Filter, RefreshCw, AlertCircle } from 'lucide-react';
+import { Eye, Search, RefreshCw, AlertCircle } from 'lucide-react';
 import { 
   Dialog, 
   DialogContent, 
   DialogHeader, 
   DialogTitle, 
   DialogTrigger,
-  DialogFooter
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
@@ -51,9 +50,10 @@ export function PatientList() {
   const [organizationFilter, setOrganizationFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false); // Nouvel état pour l'animation de rafraîchissement
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   
-  // État pour stocker les patients (données à remplacer par les données blockchain)
+  // État pour stocker les patients
   const [patients, setPatients] = useState<PatientRequest[]>([]);
   const [prevPatients, setPrevPatients] = useState<Record<string, PatientRequest>>({});
   const [registeredPatients, setRegisteredPatients] = useState<any[]>([]);
@@ -74,11 +74,13 @@ export function PatientList() {
     setErrorMsg(null);
     
     try {
-      // Simulation d'appel à l'API blockchain
       console.log("🔹 Récupération des requêtes patients depuis la blockchain...");
       
-      // Dans un environnement réel, ceci serait remplacé par l'appel à l'API blockchain
-      const mockRequests = await BlockchainService.getPatientRequests(organization?.code);
+      // Récupérer les requêtes en fonction de l'organisation de l'utilisateur connecté
+      const orgCode = organization?.code; // org2 ou org3
+      const mockRequests = await BlockchainService.getPatientRequests(orgCode);
+      
+      console.log("📋 Requêtes récupérées:", mockRequests);
       
       // Compare with previous state to detect changes
       const newPatients = mockRequests.map(patient => {
@@ -125,6 +127,12 @@ export function PatientList() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const refreshData = async () => {
+    setIsRefreshing(true);
+    await fetchPatientRequests();
+    setTimeout(() => setIsRefreshing(false), 500); // Maintenir l'animation un minimum de temps
   };
 
   useEffect(() => {
@@ -216,12 +224,12 @@ export function PatientList() {
 
   return (
     <div className="space-y-4">
-      <div className="bg-white rounded-md shadow">
+      <div className="bg-white rounded-md shadow transition-all duration-300 hover:shadow-md">
         <div className="p-4 border-b flex justify-between items-center">
           <div>
             <h2 className="text-lg font-medium">Liste des requêtes de patients</h2>
             <p className="text-sm text-gray-500 mt-1">
-              Les requêtes sont récupérées depuis la blockchain et leur état est géré par une entité externe
+              Organisation: {organization?.name || "Non définie"}
             </p>
           </div>
           
@@ -229,10 +237,11 @@ export function PatientList() {
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={fetchPatientRequests}
-              disabled={isLoading}
+              onClick={refreshData}
+              disabled={isLoading || isRefreshing}
+              className="transition-all duration-300 hover:bg-gray-100"
             >
-              <RefreshCw className={`h-4 w-4 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`h-4 w-4 mr-1 ${(isLoading || isRefreshing) ? 'animate-spin' : ''}`} />
               Actualiser
             </Button>
             
@@ -240,7 +249,7 @@ export function PatientList() {
               variant={viewMode === 'table' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setViewMode('table')}
-              className="transition-all"
+              className="transition-all duration-200"
             >
               Tableau
             </Button>
@@ -248,7 +257,7 @@ export function PatientList() {
               variant={viewMode === 'cards' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setViewMode('cards')}
-              className="transition-all"
+              className="transition-all duration-200"
             >
               Cartes
             </Button>
@@ -262,7 +271,7 @@ export function PatientList() {
               placeholder="Rechercher..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8"
+              className="pl-8 transition-all duration-200 focus:border-medical-primary focus:ring-1 focus:ring-medical-primary"
             />
           </div>
           
@@ -271,7 +280,7 @@ export function PatientList() {
               value={organizationFilter}
               onValueChange={setOrganizationFilter}
             >
-              <SelectTrigger>
+              <SelectTrigger className="transition-all duration-200 focus:border-medical-primary focus:ring-1 focus:ring-medical-primary">
                 <SelectValue placeholder="Filtrer par organisation" />
               </SelectTrigger>
               <SelectContent>
@@ -284,7 +293,7 @@ export function PatientList() {
         </div>
         
         {errorMsg && (
-          <div className="p-4 bg-red-50 text-red-700 flex items-center gap-2">
+          <div className="p-4 bg-red-50 text-red-700 flex items-center gap-2 animate-fade-in">
             <AlertCircle className="h-5 w-5" />
             <span>{errorMsg}</span>
           </div>
@@ -329,7 +338,7 @@ export function PatientList() {
                       filteredPatients.map((patient) => (
                         <TableRow 
                           key={patient.requestId} 
-                          className={`hover:bg-gray-50 ${patient.isNew ? 'animate-fade-in' : ''}`}
+                          className={`hover:bg-gray-50 transition-all duration-200 ${patient.isNew ? 'animate-fade-in' : ''}`}
                         >
                           <TableCell className="font-medium flex items-center gap-2">
                             {patient.requestId}
@@ -345,7 +354,7 @@ export function PatientList() {
                           <TableCell>{patient.matricule}</TableCell>
                           <TableCell>{patient.numeroOrganisation}</TableCell>
                           <TableCell>
-                            <Badge variant="outline" className={getStatusColor(patient.etatRequest)}>
+                            <Badge variant="outline" className={`${getStatusColor(patient.etatRequest)} transition-all duration-300`}>
                               {getStatusText(patient.etatRequest)}
                             </Badge>
                           </TableCell>
@@ -354,7 +363,7 @@ export function PatientList() {
                             {patient.etatRequest === 'ACCEPTED' && (
                               <Button 
                                 variant="outline"
-                                className="h-8 text-xs transition-all hover:bg-green-50 hover:text-green-700 hover:border-green-300"
+                                className="h-8 text-xs transition-all duration-300 hover:bg-green-50 hover:text-green-700 hover:border-green-300"
                                 onClick={() => handleCreateCryptoMaterial(patient)}
                               >
                                 Créer Crypto
@@ -364,11 +373,11 @@ export function PatientList() {
                             {/* Détails du patient */}
                             <Dialog>
                               <DialogTrigger asChild>
-                                <Button variant="outline" size="icon" className="h-8 w-8">
+                                <Button variant="outline" size="icon" className="h-8 w-8 transition-all duration-200 hover:bg-gray-100">
                                   <Eye className="h-4 w-4" />
                                 </Button>
                               </DialogTrigger>
-                              <DialogContent className="sm:max-w-md">
+                              <DialogContent className="sm:max-w-md animate-scale-in">
                                 <DialogHeader>
                                   <DialogTitle>Détails de la requête patient</DialogTitle>
                                 </DialogHeader>
@@ -419,7 +428,7 @@ export function PatientList() {
                   filteredPatients.map((patient) => (
                     <Card 
                       key={patient.requestId} 
-                      className={`overflow-hidden transition-all duration-300 hover:shadow-md ${
+                      className={`overflow-hidden transition-all duration-300 hover:shadow-md transform hover:-translate-y-1 ${
                         patient.isNew ? 'animate-fade-in' : ''
                       } ${
                         patient.hasStateChanged ? 'ring-2 ring-red-400' : ''
@@ -463,7 +472,7 @@ export function PatientList() {
                           </div>
                           <div className="flex justify-between items-center">
                             <span className="text-gray-500">État:</span>
-                            <Badge className={getStatusColor(patient.etatRequest)}>
+                            <Badge className={`${getStatusColor(patient.etatRequest)} transition-all duration-300`}>
                               {getStatusText(patient.etatRequest)}
                             </Badge>
                           </div>
@@ -474,7 +483,7 @@ export function PatientList() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="transition-all hover:bg-green-50 hover:text-green-700 hover:border-green-300"
+                            className="transition-all duration-300 hover:bg-green-50 hover:text-green-700 hover:border-green-300"
                             onClick={() => handleCreateCryptoMaterial(patient)}
                           >
                             Créer Crypto
@@ -482,11 +491,11 @@ export function PatientList() {
                         )}
                         <Dialog>
                           <DialogTrigger asChild>
-                            <Button variant="outline" size="icon" className="h-8 w-8">
+                            <Button variant="outline" size="icon" className="h-8 w-8 transition-all duration-200 hover:bg-gray-100">
                               <Eye className="h-4 w-4" />
                             </Button>
                           </DialogTrigger>
-                          <DialogContent className="sm:max-w-md">
+                          <DialogContent className="sm:max-w-md animate-scale-in">
                             <DialogHeader>
                               <DialogTitle>Détails de la requête patient</DialogTitle>
                             </DialogHeader>
@@ -531,7 +540,7 @@ export function PatientList() {
       </div>
       
       {/* Liste des patients enregistrés dans la base de données */}
-      <div className="bg-white rounded-md shadow">
+      <div className="bg-white rounded-md shadow transition-all duration-300 hover:shadow-md">
         <div className="p-4 border-b">
           <h2 className="text-lg font-medium">Patients enregistrés dans la base de données</h2>
           <p className="text-sm text-gray-500 mt-1">
@@ -546,7 +555,7 @@ export function PatientList() {
         ) : (
           <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {registeredPatients.map((patient) => (
-              <Card key={patient.id} className="overflow-hidden transition-all duration-300 hover:shadow-md">
+              <Card key={patient.id} className="overflow-hidden transition-all duration-300 hover:shadow-md transform hover:-translate-y-1 animate-fade-in">
                 <CardHeader className="bg-blue-50 pb-2">
                   <CardTitle className="text-lg">{patient.name}</CardTitle>
                   <CardDescription className="text-gray-700">

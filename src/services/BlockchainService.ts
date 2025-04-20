@@ -154,14 +154,18 @@ export class BlockchainService {
         
         // Filtrer par organisation si spécifié
         if (organization) {
-          requests = requests.filter(req => {
-            // Obtenir le code d'organisation (HCA/HQA) à partir de l'orgId (org2/org3)
-            const orgCode = Object.entries(ORG_MAPPING).find(
-              ([_, value]) => value.orgId === organization
-            )?.[0];
-            
-            return req.numeroOrganisation === orgCode;
-          });
+          console.log("🔍 Filtrage des requêtes pour l'organisation:", organization);
+          
+          // Convertir org2/org3 en HCA/HQA pour la comparaison avec numeroOrganisation
+          const orgCode = Object.entries(ORG_MAPPING).find(
+            ([_, value]) => value.orgId === organization
+          )?.[0];
+          
+          if (orgCode) {
+            console.log(`🔄 Conversion de ${organization} en ${orgCode} pour le filtrage`);
+            requests = requests.filter(req => req.numeroOrganisation === orgCode);
+            console.log(`📊 ${requests.length} requêtes trouvées pour l'organisation ${orgCode}`);
+          }
         }
         
         return requests;
@@ -207,14 +211,18 @@ export class BlockchainService {
         
         // Filtrer par organisation si spécifié
         if (organization) {
-          requests = requests.filter(req => {
-            // Obtenir le code d'organisation (HCA/HQA) à partir de l'orgId (org2/org3)
-            const orgCode = Object.entries(ORG_MAPPING).find(
-              ([_, value]) => value.orgId === organization
-            )?.[0];
-            
-            return req.numeroOrg === orgCode;
-          });
+          console.log("🔍 Filtrage des requêtes pour l'organisation:", organization);
+          
+          // Convertir org2/org3 en HCA/HQA pour la comparaison avec numeroOrg
+          const orgCode = Object.entries(ORG_MAPPING).find(
+            ([_, value]) => value.orgId === organization
+          )?.[0];
+          
+          if (orgCode) {
+            console.log(`🔄 Conversion de ${organization} en ${orgCode} pour le filtrage`);
+            requests = requests.filter(req => req.numeroOrg === orgCode);
+            console.log(`📊 ${requests.length} requêtes trouvées pour l'organisation ${orgCode}`);
+          }
         }
         
         return requests;

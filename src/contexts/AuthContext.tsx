@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 // Types
 export interface Organization {
   name: string;
-  code: string; // Adding the code property
+  code: string;
 }
 
 export interface User {
@@ -68,6 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role: 'admin',
         organization: { name: 'Hôpital HCA', code: 'org2' },
       });
+      console.log("✅ Admin HCA créé avec succès");
     }
     
     if (!users['admin@hqa.com']) {
@@ -78,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role: 'admin',
         organization: { name: 'Hôpital HQA', code: 'org3' },
       });
+      console.log("✅ Admin HQA créé avec succès");
     }
   }, []);
 
@@ -150,8 +152,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     if (storedUser && storedOrg) {
       try {
-        setUser(JSON.parse(storedUser));
-        setOrganization(JSON.parse(storedOrg));
+        const parsedUser = JSON.parse(storedUser);
+        const parsedOrg = JSON.parse(storedOrg);
+        
+        console.log("📱 Session utilisateur trouvée:", parsedUser.name, "Organisation:", parsedOrg.name);
+        
+        setUser(parsedUser);
+        setOrganization(parsedOrg);
       } catch (error) {
         console.error("Error parsing stored user data:", error);
         // Clear invalid storage data
