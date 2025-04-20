@@ -1,10 +1,10 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { ORG_MAPPING, OrganizationCode } from '@/utils/organizationMapping';
 
 // Types
 export interface Organization {
   name: string;
-  code: string;
+  code: OrganizationCode;
 }
 
 export interface User {
@@ -36,9 +36,9 @@ const getStoredUsers = (): Record<string, { password: string, user: User }> => {
 // Helper function to convert string organization to Organization object
 const getOrganizationObject = (org: string): Organization => {
   if (org === 'HCA') {
-    return { name: 'Hôpital HCA', code: 'org2' };
+    return { name: 'Hôpital HCA', code: 'HCA' };
   } else if (org === 'HQA') {
-    return { name: 'Hôpital HQA', code: 'org3' };
+    return { name: 'Hôpital HQA', code: 'HQA' };
   }
   return { name: 'Unknown', code: 'unknown' };
 };
@@ -66,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: 'admin@HCA.com',
         name: 'Admin HCA',
         role: 'admin',
-        organization: { name: 'Hôpital HCA', code: 'org2' },
+        organization: { name: 'Hôpital HCA', code: 'HCA' },
       });
       console.log("✅ Admin HCA créé avec succès");
     }
@@ -77,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: 'admin@HQA.com',
         name: 'Admin HQA',
         role: 'admin',
-        organization: { name: 'Hôpital HQA', code: 'org3' },
+        organization: { name: 'Hôpital HQA', code: 'HQA' },
       });
       console.log("✅ Admin HQA créé avec succès");
     }

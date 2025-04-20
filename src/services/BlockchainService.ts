@@ -1,3 +1,4 @@
+import { ORG_MAPPING, OrganizationCode } from '@/utils/organizationMapping';
 import axios from 'axios';
 
 // Configuration de l'API blockchain
@@ -7,12 +8,6 @@ export const API_CONFIG = {
   CHAINCODE_HEALTH_PATIENT: 'patient',
   CHAINCODE_HEALTH_ACTOR: 'healthactor',
   CHAINCODE_HEALTH_AUTHORITY: 'healthauthority'
-};
-
-// Mappage des organisations
-export const ORG_MAPPING = {
-  HCA: { orgId: "org2", peer: "peer0.org2.example.com", admin: "hospitalAdmin1", orgName: "Org2" },
-  HQA: { orgId: "org3", peer: "peer0.org3.example.com", admin: "hospitalAdmin2", orgName: "Org3" }
 };
 
 // Types pour les requêtes
@@ -45,7 +40,6 @@ export interface HealthActorRequest {
   hasStateChanged?: boolean;
 }
 
-// Classe de service pour interagir avec la blockchain
 export class BlockchainService {
   // Fonction pour obtenir le token d'authentification de l'admin
   static async getAdminToken(): Promise<string | null> {
@@ -93,7 +87,117 @@ export class BlockchainService {
       return null;
     }
   }
-  
+
+  // Récupérer les requêtes de patients depuis la blockchain
+  static async getPatientRequests(organization?: OrganizationCode): Promise<PatientRequest[]> {
+    try {
+      const authToken = await this.getAdminToken();
+      if (!authToken) {
+        throw new Error("Impossible d'obtenir le token d'authentification");
+      }
+
+      console.log("🔹 Récupération des demandes de patients...");
+      
+      const response = await axios.get(
+        `${API_CONFIG.BASE_URL}/channels/${API_CONFIG.CHANNEL}/chaincodes/${API_CONFIG.CHAINCODE_HEALTH_PATIENT}`, 
+        {
+          params: {
+            fcn: "GetAllPatientRequests",
+            args: '[]',
+          },
+          headers: {
+            "Authorization": `Bearer ${authToken}`,
+            "Content-Type": "application/json"
+          }
+        }
+      );
+
+      console.log("✅ Réponse reçue:", response.data);
+      
+      if (response.data && response.data.result && response.data.result.data) {
+        let requests = response.data.result.data as PatientRequest[];
+        
+        // Filtrer par organisation si spécifié
+        if (organization) {
+          console.log("🔍 Filtrage des requêtes pour l'organisation:", organization);
+          requests = requests.filter(req => {
+            const orgMapping = ORG_MAPPING[organization as OrganizationCode];
+            return req.numeroOrganisation === organization;
+          });
+          console.log(`📊 ${requests.length} requêtes trouvées pour l'organisation ${organization}`);
+        }
+        
+        return requests;
+      }
+      
+      console.error("❌ Format de réponse invalide:", response.data);
+      return [];
+    } catch (error: any) {
+      console.error("❌ Erreur lors de la récupération des requêtes:", error.response?.data || error.message);
+      return [];
+    }
+  }
+
+  // Récupérer les requêtes d'acteurs de santé depuis la blockchain
+  static async getHealthActorRequests(organization?: OrganizationCode): Promise<HealthActorRequest[]> {
+    try {
+      const authToken = await this.getAdminToken();
+      if (!authToken) {
+        throw new Error("Impossible d'obtenir le token d'authentification");
+      }
+
+      console.log("🔹 Récupération des demandes d'acteurs de santé...");
+      
+      const response = await axios.get(
+        `${API_CONFIG.BASE_URL}/channels/${API_CONFIG.CHANNEL}/chaincodes/${API_CONFIG.CHAINCODE_HEALTH_ACTOR}`, 
+        {
+          params: {
+            fcn: "GetAllHealthActorRequests",
+            args: '[]',
+          },
+          headers: {
+            "Authorization": `Bearer ${authToken}`,
+            "Content-Type": "application/json"
+          }
+        }
+      );
+
+      console.log("✅ Réponse reçue:", response.data);
+      
+      if (response.data && response.data.result && response.data.result.data) {
+        let requests = response.data.result.data as HealthActorRequest[];
+        
+        // Filtrer par organisation si spécifié
+        if (organization) {
+          console.log("🔍 Filtrage des requêtes pour l'organisation:", organization);
+          requests = requests.filter(req => {
+            const orgMapping = ORG_MAPPING[organization as OrganizationCode];
+            return req.numeroOrg === organization;
+          });
+          console.log(`📊 ${requests.length} requêtes trouvées pour l'organisation ${organization}`);
+        }
+        
+        return requests;
+      }
+      
+      console.error("❌ Format de réponse invalide:", response.data);
+      return [];
+    } catch (error: any) {
+      console.error("❌ Erreur lors de la récupération des requêtes:", error.response?.data || error.message);
+      return [];
+    }
+  }
+
+  // Fonction pour générer un mot de passe sécurisé
+  private static generateSecurePassword(length = 10): string {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()";
+    let password = "";
+    for (let i = 0; i < length; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+  }
+
   // Fonction pour enregistrer un nouvel utilisateur
   static async registerUser(token: string, username: string, orgName: string): Promise<boolean> {
     try {
@@ -120,130 +224,6 @@ export class BlockchainService {
       console.error('❌ Erreur lors de l\'enregistrement de l\'utilisateur:', error.response?.data || error.message);
       return false;
     }
-  }
-
-  // Récupérer les requêtes de patients depuis la blockchain
-  static async getPatientRequests(organization?: string): Promise<PatientRequest[]> {
-    try {
-      const authToken = await this.getAdminToken();
-      if (!authToken) {
-        throw new Error("Impossible d'obtenir le token d'authentification");
-      }
-
-      console.log("🔹 Récupération des demandes de patients...");
-      
-      const response = await axios.get(
-        `${API_CONFIG.BASE_URL}/channels/${API_CONFIG.CHANNEL}/chaincodes/${API_CONFIG.CHAINCODE_HEALTH_PATIENT}`, 
-        {
-          params: {
-            fcn: "GetAllPatientRequests",
-            args: '[]',
-          },
-          headers: {
-            "Authorization": `Bearer ${authToken}`,
-            "Content-Type": "application/json"
-          }
-        }
-      );
-
-      console.log("✅ Réponse reçue:", response.data);
-      
-      // Traitement de la réponse
-      if (response.data && response.data.result && response.data.result.data) {
-        let requests = response.data.result.data as PatientRequest[];
-        
-        // Filtrer par organisation si spécifié
-        if (organization) {
-          console.log("🔍 Filtrage des requêtes pour l'organisation:", organization);
-          
-          // Convertir org2/org3 en HCA/HQA pour la comparaison avec numeroOrganisation
-          const orgCode = Object.entries(ORG_MAPPING).find(
-            ([_, value]) => value.orgId === organization
-          )?.[0];
-          
-          if (orgCode) {
-            console.log(`🔄 Conversion de ${organization} en ${orgCode} pour le filtrage`);
-            requests = requests.filter(req => req.numeroOrganisation === orgCode);
-            console.log(`📊 ${requests.length} requêtes trouvées pour l'organisation ${orgCode}`);
-          }
-        }
-        
-        return requests;
-      } else {
-        console.error("❌ Format de réponse invalide:", response.data);
-        return [];
-      }
-    } catch (error: any) {
-      console.error("❌ Erreur lors de la récupération des requêtes:", error.response?.data || error.message);
-      return [];
-    }
-  }
-
-  // Récupérer les requêtes d'acteurs de santé depuis la blockchain
-  static async getHealthActorRequests(organization?: string): Promise<HealthActorRequest[]> {
-    try {
-      const authToken = await this.getAdminToken();
-      if (!authToken) {
-        throw new Error("Impossible d'obtenir le token d'authentification");
-      }
-
-      console.log("🔹 Récupération des demandes d'acteurs de santé...");
-      
-      const response = await axios.get(
-        `${API_CONFIG.BASE_URL}/channels/${API_CONFIG.CHANNEL}/chaincodes/${API_CONFIG.CHAINCODE_HEALTH_ACTOR}`, 
-        {
-          params: {
-            fcn: "GetAllHealthActorRequests",
-            args: '[]',
-          },
-          headers: {
-            "Authorization": `Bearer ${authToken}`,
-            "Content-Type": "application/json"
-          }
-        }
-      );
-
-      console.log("✅ Réponse reçue:", response.data);
-      
-      // Traitement de la réponse
-      if (response.data && response.data.result && response.data.result.data) {
-        let requests = response.data.result.data as HealthActorRequest[];
-        
-        // Filtrer par organisation si spécifié
-        if (organization) {
-          console.log("🔍 Filtrage des requêtes pour l'organisation:", organization);
-          
-          // Convertir org2/org3 en HCA/HQA pour la comparaison avec numeroOrg
-          const orgCode = Object.entries(ORG_MAPPING).find(
-            ([_, value]) => value.orgId === organization
-          )?.[0];
-          
-          if (orgCode) {
-            console.log(`🔄 Conversion de ${organization} en ${orgCode} pour le filtrage`);
-            requests = requests.filter(req => req.numeroOrg === orgCode);
-            console.log(`📊 ${requests.length} requêtes trouvées pour l'organisation ${orgCode}`);
-          }
-        }
-        
-        return requests;
-      } else {
-        console.error("❌ Format de réponse invalide:", response.data);
-        return [];
-      }
-    } catch (error: any) {
-      console.error("❌ Erreur lors de la récupération des requêtes:", error.response?.data || error.message);
-      return [];
-    }
-  }
-
-  // Fonction pour générer un mot de passe sécurisé
-  private static generateSecurePassword(length = 10): string {
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()";
-    let password = "";
-    for (let i = 0; i < length; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return password;
   }
 
   // Fonction pour créer des identifiants pour un patient
