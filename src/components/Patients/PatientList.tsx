@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BlockchainService, PatientRequest } from '@/services/BlockchainService';
+import { OrganizationCode } from '@/utils/organizationMapping';
 
 export function PatientList() {
   const { toast } = useToast();
@@ -77,7 +78,9 @@ export function PatientList() {
       console.log("🔹 Récupération des requêtes patients depuis la blockchain...");
       
       // Récupérer les requêtes en fonction de l'organisation de l'utilisateur connecté
-      const orgCode = organization?.code; // org2 ou org3
+      const orgCode = organization?.code;
+      console.log("🏥 Organisation de l'utilisateur connecté:", orgCode);
+      
       const mockRequests = await BlockchainService.getPatientRequests(orgCode);
       
       console.log("📋 Requêtes récupérées:", mockRequests);

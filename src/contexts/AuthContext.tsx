@@ -1,5 +1,6 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { ORG_MAPPING, OrganizationCode } from '@/utils/organizationMapping';
+import { ORG_MAPPING, OrganizationCode, getOrganizationCode } from '@/utils/organizationMapping';
 
 // Types
 export interface Organization {
@@ -35,9 +36,12 @@ const getStoredUsers = (): Record<string, { password: string, user: User }> => {
 
 // Helper function to convert string organization to Organization object
 const getOrganizationObject = (org: string): Organization => {
-  if (org === 'HCA') {
+  // Ensure we're working with a valid organization code
+  const orgCode = getOrganizationCode(org) as OrganizationCode;
+  
+  if (orgCode === 'HCA') {
     return { name: 'Hôpital HCA', code: 'HCA' };
-  } else if (org === 'HQA') {
+  } else if (orgCode === 'HQA') {
     return { name: 'Hôpital HQA', code: 'HQA' };
   }
   return { name: 'Hôpital HCA', code: 'HCA' };

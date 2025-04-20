@@ -1,4 +1,4 @@
-import { ORG_MAPPING, OrganizationCode } from '@/utils/organizationMapping';
+import { ORG_MAPPING, OrganizationCode, getOrganizationCode, getBlockchainOrgId } from '@/utils/organizationMapping';
 import axios from 'axios';
 
 // Configuration de l'API blockchain
@@ -89,7 +89,7 @@ export class BlockchainService {
   }
 
   // Récupérer les requêtes de patients depuis la blockchain
-  static async getPatientRequests(organization?: OrganizationCode): Promise<PatientRequest[]> {
+  static async getPatientRequests(organization?: OrganizationCode | string): Promise<PatientRequest[]> {
     try {
       const authToken = await this.getAdminToken();
       if (!authToken) {
@@ -126,23 +126,24 @@ export class BlockchainService {
           etatRequest: item.etat_request || 'PENDING'
         }));
         
-        // Conversion des codes d'organisation backend en codes frontend
+        // Normalize organization values: convert blockchain orgIds to frontend org codes
         requests = requests.map(req => ({
           ...req,
-          numeroOrganisation: this.convertOrgIdToCode(req.numeroOrganisation)
+          numeroOrganisation: getOrganizationCode(req.numeroOrganisation)
         }));
         
         // Filtrer par organisation si spécifié
         if (organization) {
-          console.log("🔍 Filtrage des requêtes pour l'organisation:", organization);
-          const orgId = ORG_MAPPING[organization].orgId;
+          // Ensure we're working with a valid organization code (HCA/HQA)
+          const orgCode = getOrganizationCode(organization as string);
+          console.log(`🔍 Filtrage des requêtes pour l'organisation: ${orgCode}`);
           
           requests = requests.filter(req => {
-            // La comparaison doit se faire avec le code d'organisation frontend
-            return req.numeroOrganisation === organization;
+            // La comparaison doit se faire avec le code d'organisation frontend standardisé
+            return req.numeroOrganisation === orgCode;
           });
           
-          console.log(`📊 ${requests.length} requêtes trouvées pour l'organisation ${organization}`);
+          console.log(`📊 ${requests.length} requêtes trouvées pour l'organisation ${orgCode}`);
         }
         
         return requests;
@@ -156,15 +157,8 @@ export class BlockchainService {
     }
   }
 
-  // Fonction utilitaire pour convertir un organization ID (org2/org3) en code d'organisation (HCA/HQA)
-  private static convertOrgIdToCode(orgId: string): string {
-    if (orgId === 'org2') return 'HCA';
-    if (orgId === 'org3') return 'HQA';
-    return orgId; // Retourner la valeur d'origine si elle n'est pas reconnue
-  }
-
   // Récupérer les requêtes d'acteurs de santé depuis la blockchain
-  static async getHealthActorRequests(organization?: OrganizationCode): Promise<HealthActorRequest[]> {
+  static async getHealthActorRequests(organization?: OrganizationCode | string): Promise<HealthActorRequest[]> {
     try {
       const authToken = await this.getAdminToken();
       if (!authToken) {
@@ -202,21 +196,24 @@ export class BlockchainService {
           etatRequest: item.etat_request || 'PENDING'
         }));
         
-        // Conversion des codes d'organisation backend en codes frontend
+        // Normalize organization values: convert blockchain orgIds to frontend org codes
         requests = requests.map(req => ({
           ...req,
-          numeroOrg: this.convertOrgIdToCode(req.numeroOrg)
+          numeroOrg: getOrganizationCode(req.numeroOrg)
         }));
         
         // Filtrer par organisation si spécifié
         if (organization) {
-          console.log("🔍 Filtrage des requêtes pour l'organisation:", organization);
+          // Ensure we're working with a valid organization code
+          const orgCode = getOrganizationCode(organization as string);
+          console.log(`🔍 Filtrage des requêtes pour l'organisation: ${orgCode}`);
           
           requests = requests.filter(req => {
-            return req.numeroOrg === organization;
+            // La comparaison doit se faire avec le code d'organisation frontend standardisé
+            return req.numeroOrg === orgCode;
           });
           
-          console.log(`📊 ${requests.length} requêtes trouvées pour l'organisation ${organization}`);
+          console.log(`📊 ${requests.length} requêtes trouvées pour l'organisation ${orgCode}`);
         }
         
         return requests;

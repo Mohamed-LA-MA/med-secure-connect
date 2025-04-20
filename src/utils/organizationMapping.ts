@@ -26,19 +26,23 @@ export const ORG_MAPPING: Record<OrganizationCode, OrganizationConfig> = {
   }
 };
 
+// Get display name from blockchain orgId
 export const getDisplayName = (orgId: string): string => {
   const entry = Object.values(ORG_MAPPING).find(org => org.orgId === orgId);
   return entry?.displayName || orgId;
 };
 
+// Convert organization code (HCA/HQA) to blockchain orgId (org2/org3)
 export const getBlockchainOrgId = (displayName: OrganizationCode): string => {
   return ORG_MAPPING[displayName]?.orgId || displayName;
 };
 
-// Convert blockchain orgId to organization code (HCA or HQA)
+// Convert blockchain orgId (org2/org3) to organization code (HCA/HQA)
 export const getOrganizationCode = (orgId: string): OrganizationCode => {
   if (orgId === 'org2') return 'HCA';
   if (orgId === 'org3') return 'HQA';
+  // If orgId is already an OrganizationCode, return it
+  if (orgId === 'HCA' || orgId === 'HQA') return orgId as OrganizationCode;
   // Default fallback - should be handled with proper validation
   return 'HCA';
 };
