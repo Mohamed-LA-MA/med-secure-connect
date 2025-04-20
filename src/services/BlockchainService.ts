@@ -115,15 +115,33 @@ export class BlockchainService {
       console.log("✅ Réponse reçue:", response.data);
       
       if (response.data && response.data.result && response.data.result.data) {
-        let requests = response.data.result.data as PatientRequest[];
+        // Formatage des données - conversion de snake_case en camelCase et mapping des champs
+        let requests = response.data.result.data.map((item: any) => ({
+          requestId: item.request_id,
+          patientId: item.patient_id,
+          name: item.name,
+          matricule: item.matricule ? item.matricule.toString() : '',
+          ehrid: item.ehr_id ? item.ehr_id.toString() : '',
+          numeroOrganisation: item.numero_organisation,
+          etatRequest: item.etat_request || 'PENDING'
+        }));
+        
+        // Conversion des codes d'organisation backend en codes frontend
+        requests = requests.map(req => ({
+          ...req,
+          numeroOrganisation: this.convertOrgIdToCode(req.numeroOrganisation)
+        }));
         
         // Filtrer par organisation si spécifié
         if (organization) {
           console.log("🔍 Filtrage des requêtes pour l'organisation:", organization);
+          const orgId = ORG_MAPPING[organization].orgId;
+          
           requests = requests.filter(req => {
-            const orgMapping = ORG_MAPPING[organization as OrganizationCode];
+            // La comparaison doit se faire avec le code d'organisation frontend
             return req.numeroOrganisation === organization;
           });
+          
           console.log(`📊 ${requests.length} requêtes trouvées pour l'organisation ${organization}`);
         }
         
@@ -136,6 +154,13 @@ export class BlockchainService {
       console.error("❌ Erreur lors de la récupération des requêtes:", error.response?.data || error.message);
       return [];
     }
+  }
+
+  // Fonction utilitaire pour convertir un organization ID (org2/org3) en code d'organisation (HCA/HQA)
+  private static convertOrgIdToCode(orgId: string): string {
+    if (orgId === 'org2') return 'HCA';
+    if (orgId === 'org3') return 'HQA';
+    return orgId; // Retourner la valeur d'origine si elle n'est pas reconnue
   }
 
   // Récupérer les requêtes d'acteurs de santé depuis la blockchain
@@ -165,15 +190,32 @@ export class BlockchainService {
       console.log("✅ Réponse reçue:", response.data);
       
       if (response.data && response.data.result && response.data.result.data) {
-        let requests = response.data.result.data as HealthActorRequest[];
+        // Formatage des données - conversion de snake_case en camelCase
+        let requests = response.data.result.data.map((item: any) => ({
+          requestId: item.request_id,
+          healthActorId: item.health_actor_id,
+          nom: item.nom,
+          prenom: item.prenom,
+          matriculeActor: item.matricule_actor ? item.matricule_actor.toString() : '',
+          numeroOrg: item.numero_org,
+          role: item.role,
+          etatRequest: item.etat_request || 'PENDING'
+        }));
+        
+        // Conversion des codes d'organisation backend en codes frontend
+        requests = requests.map(req => ({
+          ...req,
+          numeroOrg: this.convertOrgIdToCode(req.numeroOrg)
+        }));
         
         // Filtrer par organisation si spécifié
         if (organization) {
           console.log("🔍 Filtrage des requêtes pour l'organisation:", organization);
+          
           requests = requests.filter(req => {
-            const orgMapping = ORG_MAPPING[organization as OrganizationCode];
             return req.numeroOrg === organization;
           });
+          
           console.log(`📊 ${requests.length} requêtes trouvées pour l'organisation ${organization}`);
         }
         
