@@ -155,13 +155,12 @@ export class BlockchainService {
         // Filtrer par organisation si spécifié
         if (organization) {
           requests = requests.filter(req => {
-            // Mapping des codes d'organisation
-            const orgMap: Record<string, string> = {
-              'org2': 'HCA',
-              'org3': 'HQA'
-            };
+            // Obtenir le code d'organisation (HCA/HQA) à partir de l'orgId (org2/org3)
+            const orgCode = Object.entries(ORG_MAPPING).find(
+              ([_, value]) => value.orgId === organization
+            )?.[0];
             
-            return req.numeroOrganisation === orgMap[organization];
+            return req.numeroOrganisation === orgCode;
           });
         }
         
@@ -209,13 +208,12 @@ export class BlockchainService {
         // Filtrer par organisation si spécifié
         if (organization) {
           requests = requests.filter(req => {
-            // Mapping des codes d'organisation
-            const orgMap: Record<string, string> = {
-              'org2': 'HCA',
-              'org3': 'HQA'
-            };
+            // Obtenir le code d'organisation (HCA/HQA) à partir de l'orgId (org2/org3)
+            const orgCode = Object.entries(ORG_MAPPING).find(
+              ([_, value]) => value.orgId === organization
+            )?.[0];
             
-            return req.numeroOrg === orgMap[organization];
+            return req.numeroOrg === orgCode;
           });
         }
         
@@ -386,6 +384,11 @@ export class BlockchainService {
       };
       
       // Dans une implémentation réelle, nous sauvegarderions ces informations dans une base de données
+      // Pour la démo, on utilise localStorage
+      const healthActorCredentials = JSON.parse(localStorage.getItem('medSecureHealthActorCredentials') || '{}');
+      healthActorCredentials[actorId] = credentials;
+      localStorage.setItem('medSecureHealthActorCredentials', JSON.stringify(healthActorCredentials));
+      
       console.log("✅ Identifiants créés avec succès:", { entityId: actorId, username });
       
       return true;
