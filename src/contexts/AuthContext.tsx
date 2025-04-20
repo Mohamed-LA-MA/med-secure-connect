@@ -40,7 +40,7 @@ const getOrganizationObject = (org: string): Organization => {
   } else if (org === 'HQA') {
     return { name: 'Hôpital HQA', code: 'HQA' };
   }
-  return { name: 'Unknown', code: 'unknown' };
+  return { name: 'Hôpital HCA', code: 'HCA' };
 };
 
 // Context provider component

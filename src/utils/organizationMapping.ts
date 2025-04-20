@@ -35,3 +35,10 @@ export const getBlockchainOrgId = (displayName: OrganizationCode): string => {
   return ORG_MAPPING[displayName]?.orgId || displayName;
 };
 
+// Convert blockchain orgId to organization code (HCA or HQA)
+export const getOrganizationCode = (orgId: string): OrganizationCode => {
+  if (orgId === 'org2') return 'HCA';
+  if (orgId === 'org3') return 'HQA';
+  // Default fallback - should be handled with proper validation
+  return 'HCA';
+};

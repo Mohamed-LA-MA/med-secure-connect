@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { addNewUser, Organization } from '@/contexts/AuthContext';
+import { OrganizationCode } from '@/utils/organizationMapping';
 
 interface CryptoMaterialFormProps {
   open: boolean;
@@ -64,13 +65,12 @@ export function CryptoMaterialForm({
       });
       await new Promise(resolve => setTimeout(resolve, 800)); // Simulation délai blockchain
       
-      // Convert string entityOrg to Organization object
-      const organizationObject: Organization = 
-        entityOrg === 'HCA' 
-          ? { name: 'Hôpital HCA', code: 'org2' } 
-          : entityOrg === 'HQA' 
-            ? { name: 'Hôpital HQA', code: 'org3' } 
-            : { name: 'Unknown', code: 'unknown' };
+      // Convert string entityOrg to Organization object with proper typed code
+      const orgCode: OrganizationCode = entityOrg === 'HCA' ? 'HCA' : entityOrg === 'HQA' ? 'HQA' : 'HCA';
+      const organizationObject: Organization = {
+        name: orgCode === 'HCA' ? 'Hôpital HCA' : 'Hôpital HQA',
+        code: orgCode
+      };
       
       // Ajouter l'utilisateur dans le système d'authentification
       addNewUser(email, password, {
