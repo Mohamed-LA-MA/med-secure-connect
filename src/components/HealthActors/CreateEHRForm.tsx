@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -159,16 +160,28 @@ export function CreateEHRForm() {
         secretKey: data.secretKey,
       };
       
+      console.log("Données EHR soumises:", ehrData);
+      
       // Créer l'EHR
       const ehrId = await EHRService.createEHR(ehrData, user.id, orgName);
+      console.log("ID EHR créé:", ehrId);
       
       // Mettre à jour l'EHR ID du patient
-      await EHRService.updatePatientEHRID(parseInt(data.patientMatricule), parseInt(ehrId), user.id);
+      const updateResult = await EHRService.updatePatientEHRID(parseInt(data.patientMatricule), parseInt(ehrId), user.id);
+      console.log("Résultat de la mise à jour de l'EHR ID:", updateResult);
       
-      toast({
-        title: "EHR créé avec succès",
-        description: `L'EHR a été créé avec l'ID: ${ehrId}`,
-      });
+      if (updateResult) {
+        toast({
+          title: "EHR créé avec succès",
+          description: `L'EHR a été créé avec l'ID: ${ehrId} et associé au patient`,
+        });
+      } else {
+        toast({
+          title: "Attention",
+          description: `L'EHR a été créé avec l'ID: ${ehrId} mais n'a pas pu être associé au patient`,
+          variant: "destructive",
+        });
+      }
       
       // Réinitialiser le formulaire
       form.reset();

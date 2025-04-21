@@ -1,3 +1,4 @@
+
 import axios from 'axios';
 import { API_CONFIG, BlockchainService } from './BlockchainService';
 
@@ -28,6 +29,14 @@ export class EHRService {
       // Préparer les arguments pour la création de l'EHR
       const filesJson = JSON.stringify(ehrData.ipfs);
       
+      console.log("Arguments pour AddEHRAbstract:", [
+        ehrData.title,
+        ehrData.matricule.toString(),
+        ehrData.hash,
+        filesJson,
+        ehrData.secretKey
+      ]);
+      
       const response = await axios.post(
         `${API_CONFIG.BASE_URL}/channels/${API_CONFIG.CHANNEL}/chaincodes/ehr`,
         {
@@ -49,19 +58,38 @@ export class EHRService {
         }
       );
       
-      if (response.data && response.data.success) {
-        console.log("✅ EHR créé avec succès:", response.data);
+      console.log("✅ Réponse complète de la création d'EHR:", response.data);
+      
+      if (response.data && response.data.result) {
+        // La fonction AddEHRAbstract renvoie directement l'ID de l'EHR (un nombre)
+        // Nous devons extraire cet ID de la réponse
+        let ehrId: string;
         
-        // Extraire l'ID de l'EHR de la réponse
-        // Hypothèse : l'ID est renvoyé dans un format spécifique, ajustez selon l'API réelle
-        const ehrId = response.data.ehrId || "1"; // Valeur par défaut si non disponible
+        // Analyser la réponse pour extraire l'ID
+        if (typeof response.data.result === 'string') {
+          // Si la réponse est une chaîne, essayer de la parser comme JSON
+          try {
+            const resultObj = JSON.parse(response.data.result);
+            ehrId = resultObj.toString();
+          } catch (e) {
+            // Si ce n'est pas un JSON valide, utiliser directement la valeur
+            ehrId = response.data.result;
+          }
+        } else if (typeof response.data.result === 'number') {
+          // Si la réponse est un nombre
+          ehrId = response.data.result.toString();
+        } else {
+          // Si la réponse est déjà un objet
+          ehrId = response.data.result.toString();
+        }
         
-        // Mettre à jour l'ID de l'EHR pour le patient
-        await this.updatePatientEHRID(ehrData.matricule, parseInt(ehrId), token);
-        
+        console.log("✅ EHR créé avec succès, ID:", ehrId);
         return ehrId;
+      } else if (response.data && response.data.message) {
+        // Certaines API renvoient le résultat dans le champ message
+        return response.data.message.toString();
       } else {
-        throw new Error(`Échec de la création de l'EHR: ${response.data?.message || "Erreur inconnue"}`);
+        throw new Error(`Échec de la création de l'EHR: Réponse inattendue - ${JSON.stringify(response.data)}`);
       }
     } catch (error: any) {
       console.error("❌ Erreur lors de la création de l'EHR:", error.response?.data || error.message);
@@ -91,6 +119,8 @@ export class EHRService {
           }
         }
       );
+      
+      console.log("✅ Réponse complète de la mise à jour de l'ID EHR:", response.data);
       
       if (response.data && response.data.success) {
         console.log("✅ ID EHR mis à jour avec succès pour le patient");
