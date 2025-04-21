@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 import { API_CONFIG, BlockchainService } from './BlockchainService';
 
@@ -70,25 +69,24 @@ export class EHRService {
     }
   }
   
-  static async updatePatientEHRID(matricule: number, ehrId: number, token: string): Promise<boolean> {
+  static async updatePatientEHRID(patientMatricule: number, ehrId: number, actorId: string): Promise<boolean> {
     try {
-      console.log(`🔹 Mise à jour de l'ID EHR pour le patient avec matricule ${matricule}...`);
+      console.log(`🔹 Mise à jour de l'ID EHR pour le patient avec matricule ${patientMatricule}...`);
       
       const response = await axios.post(
         `${API_CONFIG.BASE_URL}/channels/${API_CONFIG.CHANNEL}/chaincodes/${API_CONFIG.CHAINCODE_HEALTH_PATIENT}`,
         {
           fcn: "UpdatePatientEHRIDByMatricule",
           args: [
-            // La fonction prend requesterID, matricule, newEHRID comme arguments
-            "system", // requesterID (à ajuster selon vos besoins)
-            matricule.toString(),
+            actorId,
+            patientMatricule.toString(),
             ehrId.toString()
           ],
           peers: ["peer0.org2.example.com"]
         },
         {
           headers: {
-            "Authorization": `Bearer ${token}`,
+            "Authorization": `Bearer ${await BlockchainService.getAdminToken()}`,
             "Content-Type": "application/json"
           }
         }

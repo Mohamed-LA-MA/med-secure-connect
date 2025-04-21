@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -31,7 +30,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 // Schéma de validation pour le formulaire principal
 const formSchema = z.object({
-  matricule: z.string().min(1, { message: "Le matricule du patient est requis" }),
+  patientMatricule: z.string().min(1, { message: "Le matricule du patient est requis" }),
   title: z.string().min(1, { message: "Le titre de l'EHR est requis" }),
   secretKey: z.string().min(1, { message: "La clé secrète est requise" }),
 });
@@ -58,7 +57,7 @@ export function CreateEHRForm() {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      matricule: '',
+      patientMatricule: '',
       title: '',
       secretKey: '',
     },
@@ -127,6 +126,15 @@ export function CreateEHRForm() {
   
   // Soumettre le formulaire principal
   const onSubmit = async (data: FormValues) => {
+    if (!user?.id) {
+      toast({
+        title: "Erreur",
+        description: "Utilisateur non authentifié",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (files.length === 0) {
       toast({
         title: "Erreur",
@@ -139,18 +147,13 @@ export function CreateEHRForm() {
     setIsSubmitting(true);
     
     try {
-      // Récupérer l'organisation et le username depuis le contexte d'authentification
-      if (!user) {
-        throw new Error("Utilisateur non authentifié");
-      }
-      
       // Déterminer l'organisation blockchain en fonction de l'organisation de l'utilisateur
       const orgName = user.organization?.code === 'HCA' ? 'Org2' : 'Org3';
       
-      // Construire les données de l'EHR
+      // Construire les données de l'EHR avec le matricule de l'acteur de santé (user.id)
       const ehrData = {
         title: data.title,
-        matricule: parseInt(data.matricule),
+        matricule: parseInt(user.id), // Utiliser l'ID de l'acteur de santé authentifié
         hash: "", // Champ vide comme spécifié
         ipfs: files,
         secretKey: data.secretKey,
@@ -158,6 +161,9 @@ export function CreateEHRForm() {
       
       // Créer l'EHR
       const ehrId = await EHRService.createEHR(ehrData, user.id, orgName);
+      
+      // Mettre à jour l'EHR ID du patient
+      await EHRService.updatePatientEHRID(parseInt(data.patientMatricule), parseInt(ehrId), user.id);
       
       toast({
         title: "EHR créé avec succès",
@@ -191,7 +197,7 @@ export function CreateEHRForm() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
               control={form.control}
-              name="matricule"
+              name="patientMatricule"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Matricule du patient</FormLabel>
