@@ -1,4 +1,3 @@
-
 import { DashboardLayout } from '@/components/Layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,7 +13,6 @@ import {
   TableRow 
 } from '@/components/ui/table';
 
-// Données fictives
 const actorData = {
   id: 'HA001',
   nom: 'Dubois',
@@ -58,7 +56,6 @@ const HealthActorView = () => {
           <p className="text-gray-600">Gestion de votre compte et de vos accès</p>
         </div>
 
-        {/* Carte de profil */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="md:col-span-1">
             <CardHeader>
@@ -114,7 +111,6 @@ const HealthActorView = () => {
             </CardContent>
           </Card>
 
-          {/* Section principale avec onglets */}
           <div className="md:col-span-2">
             <Tabs defaultValue="dashboard">
               <TabsList className="grid w-full grid-cols-3">
@@ -123,7 +119,6 @@ const HealthActorView = () => {
                 <TabsTrigger value="requests">Demandes</TabsTrigger>
               </TabsList>
               
-              {/* Tableau de bord */}
               <TabsContent value="dashboard" className="space-y-4 mt-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Card>
@@ -163,17 +158,7 @@ const HealthActorView = () => {
                     <CardContent>
                       {pendingRequests.length > 0 ? (
                         <div className="space-y-2">
-                          {pendingRequests.map((request) => (
-                            <div key={request.id} className="flex justify-between items-center p-2 border rounded-md">
-                              <div>
-                                <p className="font-medium text-sm">{request.type}</p>
-                                <p className="text-xs text-gray-500">{request.patientName}</p>
-                              </div>
-                              <Badge variant="outline" className="bg-yellow-50 text-yellow-700">
-                                En attente
-                              </Badge>
-                            </div>
-                          ))}
+                          {pendingRequests.map(renderPatientRequests)}
                         </div>
                       ) : (
                         <p className="text-gray-500 text-sm">Aucune demande en attente</p>
@@ -201,7 +186,6 @@ const HealthActorView = () => {
                 </Card>
               </TabsContent>
               
-              {/* Liste des patients */}
               <TabsContent value="patients" className="mt-6">
                 <Card>
                   <CardHeader>
@@ -246,7 +230,6 @@ const HealthActorView = () => {
                 </Card>
               </TabsContent>
               
-              {/* Demandes */}
               <TabsContent value="requests" className="mt-6">
                 <Card>
                   <CardHeader>
@@ -292,5 +275,32 @@ const HealthActorView = () => {
     </DashboardLayout>
   );
 };
+
+const renderPatientRequests = (request: typeof pendingRequests[0]) => (
+  <div key={request.id} className="flex justify-between items-center p-2 border rounded-md hover:bg-gray-50 transition-all duration-200">
+    <div>
+      <p className="font-medium text-sm flex items-center gap-2">
+        {request.type}
+        {request.status === 'En attente' && (
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+          </span>
+        )}
+      </p>
+      <p className="text-xs text-gray-500">{request.patientName}</p>
+    </div>
+    <Badge 
+      variant="outline" 
+      className={
+        request.status === 'En attente' 
+          ? 'bg-yellow-50 text-yellow-700' 
+          : 'bg-green-50 text-green-700'
+      }
+    >
+      {request.status}
+    </Badge>
+  </div>
+);
 
 export default HealthActorView;

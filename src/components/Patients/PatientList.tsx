@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import {
   Table,
@@ -10,7 +9,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Eye, Search, RefreshCw, AlertCircle } from 'lucide-react';
+import { Eye, Search, RefreshCw, AlertCircle, Trash2 } from 'lucide-react';
 import { 
   Dialog, 
   DialogContent, 
@@ -42,6 +41,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { BlockchainService, PatientRequest } from '@/services/BlockchainService';
 import { OrganizationCode } from '@/utils/organizationMapping';
 
+type CryptoStatus = {
+  [key: string]: boolean;
+};
+
 export function PatientList() {
   const { toast } = useToast();
   const { organization } = useAuth();
@@ -51,15 +54,15 @@ export function PatientList() {
   const [organizationFilter, setOrganizationFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false); // Nouvel état pour l'animation de rafraîchissement
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  
-  // État pour stocker les patients
+  const [cryptoStatus, setCryptoStatus] = useState<CryptoStatus>({});
+  const [recentStateChanges, setRecentStateChanges] = useState<Set<string>>(new Set());
+
   const [patients, setPatients] = useState<PatientRequest[]>([]);
   const [prevPatients, setPrevPatients] = useState<Record<string, PatientRequest>>({});
   const [registeredPatients, setRegisteredPatients] = useState<any[]>([]);
 
-  // Filtrer les patients en fonction du filtre d'organisation et de la recherche
   const filteredPatients = patients.filter(patient => {
     const matchesOrg = organizationFilter === 'all' || patient.numeroOrganisation === organizationFilter;
     const matchesSearch = 
@@ -77,7 +80,6 @@ export function PatientList() {
     try {
       console.log("🔹 Récupération des requêtes patients depuis la blockchain...");
       
-      // Récupérer les requêtes en fonction de l'organisation de l'utilisateur connecté
       const orgCode = organization?.code;
       console.log("🏥 Organisation de l'utilisateur connecté:", orgCode);
       
@@ -85,15 +87,12 @@ export function PatientList() {
       
       console.log("📋 Requêtes récupérées:", mockRequests);
       
-      // Compare with previous state to detect changes
       const newPatients = mockRequests.map(patient => {
         const prevPatient = prevPatients[patient.requestId];
         
-        // Check if this is a new patient or if state has changed
         const isNew = !prevPatient;
         const hasStateChanged = prevPatient && prevPatient.etatRequest !== patient.etatRequest;
         
-        // If state has changed, show a notification
         if (hasStateChanged) {
           sonnerToast({
             title: "État de requête modifié",
@@ -111,7 +110,6 @@ export function PatientList() {
         };
       });
       
-      // Update previous patients state for next comparison
       const newPrevPatients: Record<string, PatientRequest> = {};
       mockRequests.forEach(patient => {
         newPrevPatients[patient.requestId] = { ...patient };
@@ -120,7 +118,6 @@ export function PatientList() {
       setPrevPatients(newPrevPatients);
       setPatients(newPatients);
       
-      // Récupérer les patients enregistrés depuis la base de données locale
       const storedPatients = JSON.parse(localStorage.getItem('medSecurePatientProfiles') || '{}');
       setRegisteredPatients(Object.values(storedPatients));
       
@@ -135,21 +132,18 @@ export function PatientList() {
   const refreshData = async () => {
     setIsRefreshing(true);
     await fetchPatientRequests();
-    setTimeout(() => setIsRefreshing(false), 500); // Maintenir l'animation un minimum de temps
+    setTimeout(() => setIsRefreshing(false), 500);
   };
 
   useEffect(() => {
     fetchPatientRequests();
     
-    // Set up a polling interval to simulate real-time updates
-    const interval = setInterval(fetchPatientRequests, 30000); // Check every 30 seconds
+    const interval = setInterval(fetchPatientRequests, 30000);
     
     return () => clearInterval(interval);
   }, [organization]);
 
-  // Simuler des appels API
   const handleCreateCryptoMaterial = (patient: PatientRequest) => {
-    // Ouvrir le formulaire de création de matériel crypto
     setSelectedPatient(patient);
     setCryptoFormOpen(true);
   };
@@ -158,7 +152,6 @@ export function PatientList() {
     if (!selectedPatient) return;
     
     try {
-      // Appel à l'API blockchain pour créer le matériel cryptographique
       const success = await BlockchainService.createPatientCryptoMaterial(
         selectedPatient.patientId,
         email,
@@ -169,7 +162,6 @@ export function PatientList() {
         throw new Error("Échec de la création du matériel cryptographique");
       }
       
-      // Enregistrer dans la base de données locale (localStorage) les infos complètes du patient
       const patientProfile = {
         id: selectedPatient.patientId,
         name: selectedPatient.name,
@@ -180,13 +172,16 @@ export function PatientList() {
         createdAt: new Date().toISOString()
       };
       
-      // Stocker le profil complet du patient
       const patientProfiles = JSON.parse(localStorage.getItem('medSecurePatientProfiles') || '{}');
       patientProfiles[selectedPatient.patientId] = patientProfile;
       localStorage.setItem('medSecurePatientProfiles', JSON.stringify(patientProfiles));
       
-      // Mettre à jour la liste des patients enregistrés
       setRegisteredPatients(Object.values(patientProfiles));
+      
+      setCryptoStatus(prev => ({
+        ...prev,
+        [selectedPatient.patientId]: true
+      }));
       
       toast({
         title: "Succès",
@@ -194,7 +189,6 @@ export function PatientList() {
         variant: "default",
       });
       
-      // Fermer le formulaire
       setCryptoFormOpen(false);
     } catch (error: any) {
       console.error("❌ Erreur:", error);
@@ -206,7 +200,37 @@ export function PatientList() {
     }
   };
 
-  // Function to get status color for both badges and cards
+  const handleDeleteRequest = async (requestId: string) => {
+    try {
+      setPatients(prev => prev.filter(p => p.requestId !== requestId));
+      
+      toast({
+        title: "Succès",
+        description: "Requête supprimée avec succès",
+        variant: "default",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer la requête",
+        variant: "destructive",
+      });
+    }
+  };
+
+  useEffect(() => {
+    const newChanges = new Set<string>();
+    
+    patients.forEach(patient => {
+      const prevPatient = prevPatients[patient.requestId];
+      if (prevPatient && prevPatient.etatRequest !== patient.etatRequest) {
+        newChanges.add(patient.requestId);
+      }
+    });
+    
+    setRecentStateChanges(newChanges);
+  }, [patients, prevPatients]);
+
   const getStatusColor = (status: PatientRequest['etatRequest']) => {
     const colorMap = {
       'PENDING': 'bg-yellow-50 text-yellow-700 border-yellow-200',
@@ -224,6 +248,228 @@ export function PatientList() {
     };
     return statusMap[status];
   };
+
+  const renderTableRow = (patient: PatientRequest) => (
+    <TableRow 
+      key={patient.requestId} 
+      className={`hover:bg-gray-50 transition-all duration-200 ${
+        patient.isNew ? 'animate-fade-in' : ''
+      }`}
+    >
+      <TableCell className="font-medium flex items-center gap-2">
+        {patient.requestId}
+        {recentStateChanges.has(patient.requestId) && (
+          <span className="relative flex h-3 w-3">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+          </span>
+        )}
+      </TableCell>
+      <TableCell>{patient.name}</TableCell>
+      <TableCell>{patient.ehrid}</TableCell>
+      <TableCell>{patient.matricule}</TableCell>
+      <TableCell>{patient.numeroOrganisation}</TableCell>
+      <TableCell>
+        <Badge variant="outline" className={`${getStatusColor(patient.etatRequest)} transition-all duration-300`}>
+          {getStatusText(patient.etatRequest)}
+        </Badge>
+      </TableCell>
+      <TableCell className="flex justify-end gap-2">
+        {patient.etatRequest === 'ACCEPTED' && (
+          <>
+            {cryptoStatus[patient.patientId] ? (
+              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                ✓ Crypto créé
+              </Badge>
+            ) : (
+              <Button 
+                variant="outline"
+                className="h-8 text-xs transition-all duration-300 hover:bg-green-50 hover:text-green-700 hover:border-green-300"
+                onClick={() => handleCreateCryptoMaterial(patient)}
+              >
+                Créer Crypto
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs transition-all duration-300 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
+              onClick={() => handleDeleteRequest(patient.requestId)}
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              Supprimer
+            </Button>
+          </>
+        )}
+        
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="icon" className="h-8 w-8 transition-all duration-200 hover:bg-gray-100">
+              <Eye className="h-4 w-4" />
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md animate-scale-in">
+            <DialogHeader>
+              <DialogTitle>Détails de la requête patient</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 mt-4">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="text-sm text-gray-500">ID de requête:</div>
+                <div>{patient.requestId}</div>
+                
+                <div className="text-sm text-gray-500">ID du patient:</div>
+                <div>{patient.patientId}</div>
+                
+                <div className="text-sm text-gray-500">Nom:</div>
+                <div>{patient.name}</div>
+                
+                <div className="text-sm text-gray-500">EHRID:</div>
+                <div>{patient.ehrid}</div>
+                
+                <div className="text-sm text-gray-500">Matricule:</div>
+                <div>{patient.matricule}</div>
+                
+                <div className="text-sm text-gray-500">Organisation:</div>
+                <div>{patient.numeroOrganisation}</div>
+                
+                <div className="text-sm text-gray-500">État:</div>
+                <div>
+                  <Badge variant="outline" className={getStatusColor(patient.etatRequest)}>
+                    {getStatusText(patient.etatRequest)}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </TableCell>
+    </TableRow>
+  );
+
+  const renderCard = (patient: PatientRequest) => (
+    <Card 
+      key={patient.requestId} 
+      className={`overflow-hidden transition-all duration-300 hover:shadow-md transform hover:-translate-y-1 ${
+        patient.isNew ? 'animate-fade-in' : ''
+      } ${
+        recentStateChanges.has(patient.requestId) ? 'ring-2 ring-red-400' : ''
+      }`}
+    >
+      <CardHeader className="pb-2">
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle className="text-lg">
+              {patient.name}
+            </CardTitle>
+            <CardDescription className="text-gray-700 mt-1">
+              {patient.patientId}
+            </CardDescription>
+          </div>
+          {patient.hasStateChanged && (
+            <span className="relative flex h-3 w-3 animate-pulse">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+            </span>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="pt-4">
+        <div className="space-y-3 text-sm">
+          <div className="flex justify-between">
+            <span className="text-gray-500">ID Requête:</span>
+            <span className="font-medium">{patient.requestId}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-500">EHRID:</span>
+            <span>{patient.ehrid}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-500">Matricule:</span>
+            <span>{patient.matricule}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-500">Organisation:</span>
+            <span>{patient.numeroOrganisation}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-gray-500">État:</span>
+            <Badge className={`${getStatusColor(patient.etatRequest)} transition-all duration-300`}>
+              {getStatusText(patient.etatRequest)}
+            </Badge>
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter className="flex justify-end gap-2 pt-0">
+        {patient.etatRequest === 'ACCEPTED' && (
+          <>
+            {cryptoStatus[patient.patientId] ? (
+              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                ✓ Crypto créé
+              </Badge>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="transition-all duration-300 hover:bg-green-50 hover:text-green-700 hover:border-green-300"
+                onClick={() => handleCreateCryptoMaterial(patient)}
+              >
+                Créer Crypto
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="transition-all duration-300 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
+              onClick={() => handleDeleteRequest(patient.requestId)}
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              Supprimer
+            </Button>
+          </>
+        )}
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="icon" className="h-8 w-8 transition-all duration-200 hover:bg-gray-100">
+              <Eye className="h-4 w-4" />
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md animate-scale-in">
+            <DialogHeader>
+              <DialogTitle>Détails de la requête patient</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 mt-4">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="text-sm text-gray-500">ID de requête:</div>
+                <div>{patient.requestId}</div>
+                
+                <div className="text-sm text-gray-500">ID du patient:</div>
+                <div>{patient.patientId}</div>
+                
+                <div className="text-sm text-gray-500">Nom:</div>
+                <div>{patient.name}</div>
+                
+                <div className="text-sm text-gray-500">EHRID:</div>
+                <div>{patient.ehrid}</div>
+                
+                <div className="text-sm text-gray-500">Matricule:</div>
+                <div>{patient.matricule}</div>
+                
+                <div className="text-sm text-gray-500">Organisation:</div>
+                <div>{patient.numeroOrganisation}</div>
+                
+                <div className="text-sm text-gray-500">État:</div>
+                <div>
+                  <Badge variant="outline" className={getStatusColor(patient.etatRequest)}>
+                    {getStatusText(patient.etatRequest)}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </CardFooter>
+    </Card>
+  );
 
   return (
     <div className="space-y-4">
@@ -339,83 +585,7 @@ export function PatientList() {
                       </TableRow>
                     ) : (
                       filteredPatients.map((patient) => (
-                        <TableRow 
-                          key={patient.requestId} 
-                          className={`hover:bg-gray-50 transition-all duration-200 ${patient.isNew ? 'animate-fade-in' : ''}`}
-                        >
-                          <TableCell className="font-medium flex items-center gap-2">
-                            {patient.requestId}
-                            {patient.hasStateChanged && (
-                              <span className="relative flex h-3 w-3 animate-pulse">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                              </span>
-                            )}
-                          </TableCell>
-                          <TableCell>{patient.name}</TableCell>
-                          <TableCell>{patient.ehrid}</TableCell>
-                          <TableCell>{patient.matricule}</TableCell>
-                          <TableCell>{patient.numeroOrganisation}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className={`${getStatusColor(patient.etatRequest)} transition-all duration-300`}>
-                              {getStatusText(patient.etatRequest)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="flex justify-end gap-2">
-                            {/* Affichage du bouton Créer CryptoMatériel uniquement pour les requêtes acceptées */}
-                            {patient.etatRequest === 'ACCEPTED' && (
-                              <Button 
-                                variant="outline"
-                                className="h-8 text-xs transition-all duration-300 hover:bg-green-50 hover:text-green-700 hover:border-green-300"
-                                onClick={() => handleCreateCryptoMaterial(patient)}
-                              >
-                                Créer Crypto
-                              </Button>
-                            )}
-                            
-                            {/* Détails du patient */}
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button variant="outline" size="icon" className="h-8 w-8 transition-all duration-200 hover:bg-gray-100">
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent className="sm:max-w-md animate-scale-in">
-                                <DialogHeader>
-                                  <DialogTitle>Détails de la requête patient</DialogTitle>
-                                </DialogHeader>
-                                <div className="space-y-4 mt-4">
-                                  <div className="grid grid-cols-2 gap-2">
-                                    <div className="text-sm text-gray-500">ID de requête:</div>
-                                    <div>{patient.requestId}</div>
-                                    
-                                    <div className="text-sm text-gray-500">ID du patient:</div>
-                                    <div>{patient.patientId}</div>
-                                    
-                                    <div className="text-sm text-gray-500">Nom:</div>
-                                    <div>{patient.name}</div>
-                                    
-                                    <div className="text-sm text-gray-500">EHRID:</div>
-                                    <div>{patient.ehrid}</div>
-                                    
-                                    <div className="text-sm text-gray-500">Matricule:</div>
-                                    <div>{patient.matricule}</div>
-                                    
-                                    <div className="text-sm text-gray-500">Organisation:</div>
-                                    <div>{patient.numeroOrganisation}</div>
-                                    
-                                    <div className="text-sm text-gray-500">État:</div>
-                                    <div>
-                                      <Badge variant="outline" className={getStatusColor(patient.etatRequest)}>
-                                        {getStatusText(patient.etatRequest)}
-                                      </Badge>
-                                    </div>
-                                  </div>
-                                </div>
-                              </DialogContent>
-                            </Dialog>
-                          </TableCell>
-                        </TableRow>
+                        renderTableRow(patient)
                       ))
                     )}
                   </TableBody>
@@ -429,111 +599,7 @@ export function PatientList() {
                   </div>
                 ) : (
                   filteredPatients.map((patient) => (
-                    <Card 
-                      key={patient.requestId} 
-                      className={`overflow-hidden transition-all duration-300 hover:shadow-md transform hover:-translate-y-1 ${
-                        patient.isNew ? 'animate-fade-in' : ''
-                      } ${
-                        patient.hasStateChanged ? 'ring-2 ring-red-400' : ''
-                      }`}
-                    >
-                      <CardHeader className="pb-2">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <CardTitle className="text-lg">
-                              {patient.name}
-                            </CardTitle>
-                            <CardDescription className="text-gray-700 mt-1">
-                              {patient.patientId}
-                            </CardDescription>
-                          </div>
-                          {patient.hasStateChanged && (
-                            <span className="relative flex h-3 w-3 animate-pulse">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                            </span>
-                          )}
-                        </div>
-                      </CardHeader>
-                      <CardContent className="pt-4">
-                        <div className="space-y-3 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">ID Requête:</span>
-                            <span className="font-medium">{patient.requestId}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">EHRID:</span>
-                            <span>{patient.ehrid}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">Matricule:</span>
-                            <span>{patient.matricule}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">Organisation:</span>
-                            <span>{patient.numeroOrganisation}</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-gray-500">État:</span>
-                            <Badge className={`${getStatusColor(patient.etatRequest)} transition-all duration-300`}>
-                              {getStatusText(patient.etatRequest)}
-                            </Badge>
-                          </div>
-                        </div>
-                      </CardContent>
-                      <CardFooter className="flex justify-end gap-2 pt-0">
-                        {patient.etatRequest === 'ACCEPTED' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="transition-all duration-300 hover:bg-green-50 hover:text-green-700 hover:border-green-300"
-                            onClick={() => handleCreateCryptoMaterial(patient)}
-                          >
-                            Créer Crypto
-                          </Button>
-                        )}
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button variant="outline" size="icon" className="h-8 w-8 transition-all duration-200 hover:bg-gray-100">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="sm:max-w-md animate-scale-in">
-                            <DialogHeader>
-                              <DialogTitle>Détails de la requête patient</DialogTitle>
-                            </DialogHeader>
-                            <div className="space-y-4 mt-4">
-                              <div className="grid grid-cols-2 gap-2">
-                                <div className="text-sm text-gray-500">ID de requête:</div>
-                                <div>{patient.requestId}</div>
-                                
-                                <div className="text-sm text-gray-500">ID du patient:</div>
-                                <div>{patient.patientId}</div>
-                                
-                                <div className="text-sm text-gray-500">Nom:</div>
-                                <div>{patient.name}</div>
-                                
-                                <div className="text-sm text-gray-500">EHRID:</div>
-                                <div>{patient.ehrid}</div>
-                                
-                                <div className="text-sm text-gray-500">Matricule:</div>
-                                <div>{patient.matricule}</div>
-                                
-                                <div className="text-sm text-gray-500">Organisation:</div>
-                                <div>{patient.numeroOrganisation}</div>
-                                
-                                <div className="text-sm text-gray-500">État:</div>
-                                <div>
-                                  <Badge variant="outline" className={getStatusColor(patient.etatRequest)}>
-                                    {getStatusText(patient.etatRequest)}
-                                  </Badge>
-                                </div>
-                              </div>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
-                      </CardFooter>
-                    </Card>
+                    renderCard(patient)
                   ))
                 )}
               </div>
@@ -542,7 +608,6 @@ export function PatientList() {
         )}
       </div>
       
-      {/* Liste des patients enregistrés dans la base de données */}
       <div className="bg-white rounded-md shadow transition-all duration-300 hover:shadow-md">
         <div className="p-4 border-b">
           <h2 className="text-lg font-medium">Patients enregistrés dans la base de données</h2>
@@ -599,7 +664,6 @@ export function PatientList() {
         )}
       </div>
       
-      {/* Formulaire de création de matériel cryptographique */}
       {selectedPatient && (
         <CryptoMaterialForm
           open={cryptoFormOpen}
