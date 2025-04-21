@@ -1,8 +1,9 @@
+
 import { DashboardLayout } from '@/components/Layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Calendar, User, Clock, Search } from 'lucide-react';
+import { FileText, Calendar, User, Clock, Search, Plus, FileUp } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Table, 
@@ -12,6 +13,8 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table';
+import { useState } from 'react';
+import { CreateEHRForm } from '@/components/HealthActors/CreateEHRForm';
 
 const actorData = {
   id: 'HA001',
@@ -48,6 +51,8 @@ const pendingRequests = [
 ];
 
 const HealthActorView = () => {
+  const [activeTab, setActiveTab] = useState("dashboard");
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -112,11 +117,16 @@ const HealthActorView = () => {
           </Card>
 
           <div className="md:col-span-2">
-            <Tabs defaultValue="dashboard">
-              <TabsList className="grid w-full grid-cols-3">
+            <Tabs 
+              defaultValue="dashboard" 
+              value={activeTab} 
+              onValueChange={setActiveTab}
+            >
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="dashboard">Tableau de bord</TabsTrigger>
                 <TabsTrigger value="patients">Mes patients</TabsTrigger>
                 <TabsTrigger value="requests">Demandes</TabsTrigger>
+                <TabsTrigger value="createEHR">Créer EHR</TabsTrigger>
               </TabsList>
               
               <TabsContent value="dashboard" className="space-y-4 mt-6">
@@ -173,13 +183,21 @@ const HealthActorView = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-2 gap-4">
-                      <Button variant="outline" className="flex items-center justify-center py-6">
+                      <Button 
+                        variant="outline" 
+                        className="flex items-center justify-center py-6"
+                        onClick={() => setActiveTab("patients")}
+                      >
                         <Search className="mr-2 h-4 w-4" />
                         Rechercher un patient
                       </Button>
-                      <Button variant="outline" className="flex items-center justify-center py-6">
-                        <FileText className="mr-2 h-4 w-4" />
-                        Nouvelle consultation
+                      <Button 
+                        variant="outline" 
+                        className="flex items-center justify-center py-6"
+                        onClick={() => setActiveTab("createEHR")}  
+                      >
+                        <FileUp className="mr-2 h-4 w-4" />
+                        Créer un EHR
                       </Button>
                     </div>
                   </CardContent>
@@ -217,10 +235,20 @@ const HealthActorView = () => {
                               </Badge>
                             </TableCell>
                             <TableCell>
-                              <Button variant="ghost" size="sm">
-                                <FileText className="h-4 w-4" />
-                                <span className="sr-only">Consulter</span>
-                              </Button>
+                              <div className="flex gap-2">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  onClick={() => setActiveTab("createEHR")}
+                                >
+                                  <FileUp className="h-4 w-4" />
+                                  <span className="sr-only">Créer EHR</span>
+                                </Button>
+                                <Button variant="ghost" size="sm">
+                                  <FileText className="h-4 w-4" />
+                                  <span className="sr-only">Consulter</span>
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -267,6 +295,10 @@ const HealthActorView = () => {
                     </Table>
                   </CardContent>
                 </Card>
+              </TabsContent>
+              
+              <TabsContent value="createEHR" className="mt-6">
+                <CreateEHRForm />
               </TabsContent>
             </Tabs>
           </div>
