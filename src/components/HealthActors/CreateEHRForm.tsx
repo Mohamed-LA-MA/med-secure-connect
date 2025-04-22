@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -102,14 +101,12 @@ export function CreateEHRForm() {
       setIsAddingFile(false);
       
       toast({
-        title: "Fichier ajouté",
         description: `Le fichier "${data.fileTitle}" a été ajouté avec succès`,
       });
     } catch (error: any) {
       toast({
-        title: "Erreur",
-        description: error.message,
         variant: "destructive",
+        description: error.message,
       });
     } finally {
       setIsFileUploading(false);
@@ -125,18 +122,16 @@ export function CreateEHRForm() {
   const onSubmit = async (data: FormValues) => {
     if (!user?.id) {
       toast({
-        title: "Erreur",
-        description: "Utilisateur non authentifié",
         variant: "destructive",
+        description: "Utilisateur non authentifié",
       });
       return;
     }
 
     if (files.length === 0) {
       toast({
-        title: "Erreur",
-        description: "Vous devez ajouter au moins un fichier",
         variant: "destructive",
+        description: "Vous devez ajouter au moins un fichier",
       });
       return;
     }
@@ -178,9 +173,8 @@ export function CreateEHRForm() {
       
     } catch (error: any) {
       toast({
-        title: "Erreur",
-        description: error.message,
         variant: "destructive",
+        description: error.message,
       });
     } finally {
       setIsSubmitting(false);
