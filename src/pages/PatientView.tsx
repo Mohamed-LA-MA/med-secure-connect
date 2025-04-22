@@ -1,4 +1,3 @@
-
 import { DashboardLayout } from '@/components/Layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,8 +12,8 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table';
+import { RequestsPanel } from '@/components/Patients/RequestsPanel';
 
-// Données fictives
 const patientData = {
   id: 'PAT001',
   name: 'Jean Dupont',
@@ -288,53 +287,7 @@ const PatientView = () => {
               
               {/* Demandes */}
               <TabsContent value="requests" className="mt-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Gestion des demandes</CardTitle>
-                    <CardDescription>
-                      Demandes d'accès à votre dossier médical
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>ID</TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead>Acteur</TableHead>
-                          <TableHead>Date demande</TableHead>
-                          <TableHead>Statut</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {pendingRequests.map((request) => (
-                          <TableRow key={request.id}>
-                            <TableCell className="font-medium">{request.id}</TableCell>
-                            <TableCell>{request.type}</TableCell>
-                            <TableCell>{request.actor}</TableCell>
-                            <TableCell>{request.dateRequested}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className="bg-yellow-50 text-yellow-700">
-                                {request.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex justify-end space-x-2">
-                                <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-                                  <CheckCircle className="h-4 w-4 text-green-500" />
-                                </Button>
-                                <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-                                  <XCircle className="h-4 w-4 text-red-500" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
+                <RequestsPanel />
               </TabsContent>
             </Tabs>
           </div>

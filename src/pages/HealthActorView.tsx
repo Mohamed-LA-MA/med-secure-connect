@@ -1,4 +1,3 @@
-
 import { DashboardLayout } from '@/components/Layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,6 +14,7 @@ import {
 } from '@/components/ui/table';
 import { useState } from 'react';
 import { CreateEHRForm } from '@/components/HealthActors/CreateEHRForm';
+import { RequestList } from '@/components/HealthActors/RequestList';
 
 const actorData = {
   id: 'HA001',
@@ -122,11 +122,12 @@ const HealthActorView = () => {
               value={activeTab} 
               onValueChange={setActiveTab}
             >
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="dashboard">Tableau de bord</TabsTrigger>
                 <TabsTrigger value="patients">Mes patients</TabsTrigger>
                 <TabsTrigger value="requests">Demandes</TabsTrigger>
                 <TabsTrigger value="createEHR">Créer EHR</TabsTrigger>
+                <TabsTrigger value="allRequests">Requêtes</TabsTrigger>
               </TabsList>
               
               <TabsContent value="dashboard" className="space-y-4 mt-6">
@@ -182,7 +183,7 @@ const HealthActorView = () => {
                     <CardTitle className="text-base">Actions rapides</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-4">
                       <Button 
                         variant="outline" 
                         className="flex items-center justify-center py-6"
@@ -198,6 +199,14 @@ const HealthActorView = () => {
                       >
                         <FileUp className="mr-2 h-4 w-4" />
                         Créer un EHR
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        className="flex items-center justify-center py-6"
+                        onClick={() => setActiveTab("allRequests")}  
+                      >
+                        <Calendar className="mr-2 h-4 w-4" />
+                        Mes requêtes
                       </Button>
                     </div>
                   </CardContent>
@@ -299,6 +308,10 @@ const HealthActorView = () => {
               
               <TabsContent value="createEHR" className="mt-6">
                 <CreateEHRForm />
+              </TabsContent>
+              
+              <TabsContent value="allRequests" className="mt-6">
+                <RequestList />
               </TabsContent>
             </Tabs>
           </div>
