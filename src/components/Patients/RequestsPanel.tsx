@@ -1,6 +1,7 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { CheckCircle, XCircle, FileUp, Clock, Calendar } from 'lucide-react';
+import { CheckCircle, XCircle, FileUp, Clock, Calendar, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -69,33 +70,40 @@ export function RequestsPanel() {
     try {
       const updatedRequest = await RequestService.updateRequestStatus(requestId, status);
       
-      if (status === 'ACCEPTED' && updatedRequest && updatedRequest.type === 'EHR_CREATION') {
-        if (!user?.matricule) {
-          throw new Error("Matricule du patient non trouvé");
+      if (status === 'ACCEPTED') {
+        if (updatedRequest?.type === 'EHR_CREATION') {
+          if (!user?.matricule) {
+            throw new Error("Matricule du patient non trouvé");
+          }
+          
+          const actorMatricule = parseInt(updatedRequest.actorId);
+          
+          // Créer l'EHR dans la blockchain
+          const ehrData = {
+            title: updatedRequest.title,
+            matricule: actorMatricule,
+            hash: "",
+            ipfs: updatedRequest.files || [],
+            secretKey: updatedRequest.secretKey || ""
+          };
+          
+          const orgName = updatedRequest.actorOrganization === 'HCA' ? 'Org2' : 'Org3';
+          
+          const ehrId = await EHRService.createEHR(ehrData, updatedRequest.actorId, orgName);
+          
+          // Mettre à jour l'EHR du patient
+          await EHRService.updatePatientEHRID(user.matricule, parseInt(ehrId), updatedRequest.actorId);
+          
+          toast({
+            description: "EHR créé avec succès. L'EHR a été créé et associé à votre dossier patient",
+          });
+        } else if (updatedRequest?.type === 'EHR_CONSULTATION') {
+          console.log("🔹 Simulation d'appel blockchain: SetResponse pour consultation EHR acceptée");
+          
+          toast({
+            description: "Demande de consultation acceptée. L'acteur de santé peut maintenant consulter votre dossier.",
+          });
         }
-        
-        const actorMatricule = parseInt(updatedRequest.actorId);
-        
-        // Créer l'EHR dans la blockchain
-        const ehrData = {
-          title: updatedRequest.title,
-          matricule: actorMatricule,
-          hash: "",
-          ipfs: updatedRequest.files || [],
-          secretKey: updatedRequest.secretKey || ""
-        };
-        
-        const orgName = updatedRequest.actorOrganization === 'HCA' ? 'Org2' : 'Org3';
-        
-        const ehrId = await EHRService.createEHR(ehrData, updatedRequest.actorId, orgName);
-        
-        // Mettre à jour l'EHR du patient
-        await EHRService.updatePatientEHRID(user.matricule, parseInt(ehrId), updatedRequest.actorId);
-        
-        toast({
-          title: "EHR créé avec succès",
-          description: `L'EHR a été créé et associé à votre dossier patient`,
-        });
       }
       
       await fetchRequests();
@@ -103,7 +111,6 @@ export function RequestsPanel() {
       setViewDetails(false);
       
       toast({
-        title: status === 'ACCEPTED' ? "Requête acceptée" : "Requête refusée",
         description: status === 'ACCEPTED' 
           ? "La demande a été acceptée avec succès" 
           : "La demande a été refusée",
@@ -111,7 +118,6 @@ export function RequestsPanel() {
       });
     } catch (error: any) {
       toast({
-        title: "Erreur",
         description: error.message || "Une erreur est survenue lors du traitement de la requête",
         variant: "destructive",
       });
@@ -128,11 +134,13 @@ export function RequestsPanel() {
     switch (type) {
       case 'EHR_CREATION': return 'Création EHR';
       case 'EHR_ACCESS': return 'Accès EHR';
+      case 'EHR_CONSULTATION': return 'Consultation EHR';
       case 'DOCUMENT_SHARE': return 'Partage de document';
       default: return type;
     }
   };
 
+  // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: { 
@@ -410,6 +418,13 @@ export function RequestsPanel() {
                 <p>{selectedRequest.actorName} ({selectedRequest.actorRole})</p>
                 <p className="text-sm text-gray-500">{selectedRequest.actorOrganization}</p>
               </div>
+              
+              {selectedRequest.ehrId && (
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Identifiant EHR</p>
+                  <p>{selectedRequest.ehrId}</p>
+                </div>
+              )}
               
               <div>
                 <p className="text-sm font-medium text-gray-500">Statut</p>

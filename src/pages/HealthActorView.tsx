@@ -1,8 +1,9 @@
+
 import { DashboardLayout } from '@/components/Layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Calendar, User, Clock, Search, Plus, FileUp } from 'lucide-react';
+import { FileText, Calendar, User, Clock, Search, Plus, FileUp, Eye } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Table, 
@@ -15,6 +16,8 @@ import {
 import { useState } from 'react';
 import { CreateEHRForm } from '@/components/HealthActors/CreateEHRForm';
 import { RequestList } from '@/components/HealthActors/RequestList';
+import { ConsultationRequestForm } from '@/components/HealthActors/ConsultationRequestForm';
+import { EHRConsultationView } from '@/components/HealthActors/EHRConsultationView';
 
 const actorData = {
   id: 'HA001',
@@ -52,6 +55,12 @@ const pendingRequests = [
 
 const HealthActorView = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
+
+  const handleConsultEHR = (requestId: string) => {
+    setSelectedRequestId(requestId);
+    setActiveTab("viewEHR");
+  };
 
   return (
     <DashboardLayout>
@@ -122,11 +131,12 @@ const HealthActorView = () => {
               value={activeTab} 
               onValueChange={setActiveTab}
             >
-              <TabsList className="grid w-full grid-cols-5">
+              <TabsList className="grid w-full grid-cols-6">
                 <TabsTrigger value="dashboard">Tableau de bord</TabsTrigger>
                 <TabsTrigger value="patients">Mes patients</TabsTrigger>
                 <TabsTrigger value="requests">Demandes</TabsTrigger>
                 <TabsTrigger value="createEHR">Créer EHR</TabsTrigger>
+                <TabsTrigger value="consultEHR">Consulter EHR</TabsTrigger>
                 <TabsTrigger value="allRequests">Requêtes</TabsTrigger>
               </TabsList>
               
@@ -310,8 +320,35 @@ const HealthActorView = () => {
                 <CreateEHRForm />
               </TabsContent>
               
+              <TabsContent value="consultEHR" className="mt-6">
+                <ConsultationRequestForm />
+              </TabsContent>
+              
+              <TabsContent value="viewEHR" className="mt-6">
+                {selectedRequestId ? (
+                  <EHRConsultationView requestId={selectedRequestId} />
+                ) : (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Consultation EHR</CardTitle>
+                      <CardDescription>
+                        Aucun EHR sélectionné pour consultation
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-center py-8 text-gray-500">
+                        Veuillez sélectionner une requête acceptée pour consulter l'EHR correspondant
+                      </p>
+                      <Button onClick={() => setActiveTab("allRequests")} className="w-full">
+                        Voir mes requêtes
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+              
               <TabsContent value="allRequests" className="mt-6">
-                <RequestList />
+                <RequestList onConsultEHR={handleConsultEHR} />
               </TabsContent>
             </Tabs>
           </div>

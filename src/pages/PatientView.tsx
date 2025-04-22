@@ -16,16 +16,6 @@ import {
 import { RequestsPanel } from '@/components/Patients/RequestsPanel';
 import { useAuth } from '@/contexts/AuthContext';
 
-const patientData = {
-  id: 'PAT001',
-  name: 'Jean Dupont',
-  ehrid: 'EHR001',
-  matricule: 'MAT001',
-  organisation: 'HCA',
-  dateNaissance: '15/05/1980',
-  dateInscription: '10/01/2023',
-};
-
 const recentActivities = [
   { 
     id: 'ACT001', 
