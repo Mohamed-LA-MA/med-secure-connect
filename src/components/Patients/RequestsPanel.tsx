@@ -32,7 +32,10 @@ export function RequestsPanel() {
     if (!user?.matricule) return;
     
     try {
-      const patientRequests = await RequestService.getRequestsByPatientMatricule(user.matricule);
+      console.log("Récupération des requêtes pour le matricule:", user.matricule);
+      // Assurons-nous que le matricule est un nombre
+      const patientRequests = await RequestService.getRequestsByPatientMatricule(Number(user.matricule));
+      console.log("Requêtes récupérées:", patientRequests);
       setRequests(patientRequests);
     } catch (error) {
       console.error('Erreur lors de la récupération des requêtes:', error);

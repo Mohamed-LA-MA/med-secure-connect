@@ -41,8 +41,10 @@ export class RequestService {
     const id = this.generateRequestId();
     const now = new Date().toISOString();
     
+    // S'assurer que le patientMatricule est un nombre
     const newRequest: Request = {
       ...request,
+      patientMatricule: Number(request.patientMatricule),
       id,
       createdAt: now,
       updatedAt: now
@@ -57,7 +59,9 @@ export class RequestService {
 
   static async getRequestsByPatientMatricule(matricule: number): Promise<Request[]> {
     const requests = this.getStoredRequests();
-    return Object.values(requests).filter(req => req.patientMatricule === matricule);
+    // Convertir matricule en nombre pour la comparaison si nécessaire
+    const matriculeNum = Number(matricule);
+    return Object.values(requests).filter(req => Number(req.patientMatricule) === matriculeNum);
   }
 
   static async getRequestsByActor(actorId: string): Promise<Request[]> {

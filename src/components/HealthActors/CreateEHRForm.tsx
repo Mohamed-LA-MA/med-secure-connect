@@ -143,10 +143,9 @@ export function CreateEHRForm() {
         throw new Error("Le matricule de l'acteur de santé est manquant dans votre profil. Veuillez contacter l'administrateur.");
       }
 
-      // Création d'une requête au lieu de créer directement l'EHR
       const request = await RequestService.createRequest({
         type: 'EHR_CREATION',
-        patientMatricule: parseInt(data.patientMatricule),
+        patientMatricule: Number(data.patientMatricule),
         actorId: user.id,
         actorName: user.name,
         actorRole: user.role,
