@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { CheckCircle, XCircle, FileUp, Clock, Calendar } from 'lucide-react';
@@ -29,12 +28,18 @@ export function RequestsPanel() {
   const [activeTab, setActiveTab] = useState("pending");
   
   const fetchRequests = async () => {
-    if (!user?.matricule) return;
+    if (!user?.matricule) {
+      console.error("Erreur: Matricule utilisateur non disponible");
+      return;
+    }
     
     try {
-      console.log("Récupération des requêtes pour le matricule:", user.matricule);
+      console.log("Récupération des requêtes pour le matricule:", user.matricule, "type:", typeof user.matricule);
       // Assurons-nous que le matricule est un nombre
-      const patientRequests = await RequestService.getRequestsByPatientMatricule(Number(user.matricule));
+      const matriculeNumber = Number(user.matricule);
+      console.log("Matricule converti en nombre:", matriculeNumber);
+      
+      const patientRequests = await RequestService.getRequestsByPatientMatricule(matriculeNumber);
       console.log("Requêtes récupérées:", patientRequests);
       setRequests(patientRequests);
     } catch (error) {

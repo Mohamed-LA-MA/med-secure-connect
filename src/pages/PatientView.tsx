@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { DashboardLayout } from '@/components/Layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,7 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { RequestsPanel } from '@/components/Patients/RequestsPanel';
+import { useAuth } from '@/contexts/AuthContext';
 
 const patientData = {
   id: 'PAT001',
@@ -71,6 +73,16 @@ const pendingRequests = [
 ];
 
 const PatientView = () => {
+  const { user } = useAuth();
+  
+  useEffect(() => {
+    // Log des informations du patient pour déboguer
+    if (user) {
+      console.log("Informations du patient connecté:", user);
+      console.log("Matricule du patient:", user.matricule, "type:", typeof user.matricule);
+    }
+  }, [user]);
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -88,44 +100,44 @@ const PatientView = () => {
             <CardContent className="space-y-4">
               <div className="flex justify-center mb-6">
                 <div className="h-24 w-24 rounded-full bg-medical-light flex items-center justify-center text-medical-primary text-2xl font-bold">
-                  {patientData.name.split(' ').map(n => n[0]).join('')}
+                  {user?.name ? user.name.split(' ').map(n => n[0]).join('') : 'P'}
                 </div>
               </div>
               
               <div className="space-y-3">
                 <div>
                   <p className="text-sm text-gray-500">Nom complet</p>
-                  <p className="font-medium">{patientData.name}</p>
+                  <p className="font-medium">{user?.name || 'Non disponible'}</p>
                 </div>
                 
                 <div>
                   <p className="text-sm text-gray-500">ID Patient</p>
-                  <p className="font-medium">{patientData.id}</p>
+                  <p className="font-medium">{user?.id || 'Non disponible'}</p>
                 </div>
                 
                 <div>
                   <p className="text-sm text-gray-500">EHRID</p>
-                  <p className="font-medium">{patientData.ehrid}</p>
+                  <p className="font-medium">{user?.ehrid || 'Non disponible'}</p>
                 </div>
                 
                 <div>
                   <p className="text-sm text-gray-500">Matricule</p>
-                  <p className="font-medium">{patientData.matricule}</p>
+                  <p className="font-medium">{user?.matricule || 'Non disponible'}</p>
                 </div>
                 
                 <div>
                   <p className="text-sm text-gray-500">Date de naissance</p>
-                  <p className="font-medium">{patientData.dateNaissance}</p>
+                  <p className="font-medium">{user?.dateOfBirth || 'Non disponible'}</p>
                 </div>
                 
                 <div>
                   <p className="text-sm text-gray-500">Organisation</p>
-                  <p className="font-medium">{patientData.organisation}</p>
+                  <p className="font-medium">{user?.organization?.name || 'Non disponible'}</p>
                 </div>
 
                 <div>
                   <p className="text-sm text-gray-500">Date d'inscription</p>
-                  <p className="font-medium">{patientData.dateInscription}</p>
+                  <p className="font-medium">{user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Non disponible'}</p>
                 </div>
               </div>
             </CardContent>

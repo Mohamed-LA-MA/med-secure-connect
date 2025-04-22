@@ -58,10 +58,19 @@ export class RequestService {
   }
 
   static async getRequestsByPatientMatricule(matricule: number): Promise<Request[]> {
+    console.log("Recherche des requêtes pour le matricule:", matricule, "type:", typeof matricule);
     const requests = this.getStoredRequests();
     // Convertir matricule en nombre pour la comparaison si nécessaire
     const matriculeNum = Number(matricule);
-    return Object.values(requests).filter(req => Number(req.patientMatricule) === matriculeNum);
+    
+    const filteredRequests = Object.values(requests).filter(req => {
+      const reqMatricule = Number(req.patientMatricule);
+      console.log("Comparaison: reqMatricule =", reqMatricule, "matriculeNum =", matriculeNum, "égal?", reqMatricule === matriculeNum);
+      return reqMatricule === matriculeNum;
+    });
+    
+    console.log("Requêtes filtrées:", filteredRequests);
+    return filteredRequests;
   }
 
   static async getRequestsByActor(actorId: string): Promise<Request[]> {
