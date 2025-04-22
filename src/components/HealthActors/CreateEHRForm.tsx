@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -137,7 +138,7 @@ export function CreateEHRForm() {
     
     try {
       if (!user.matricule) {
-        throw new Error("Le matricule de l'acteur de santé est manquant");
+        throw new Error("Le matricule de l'acteur de santé est manquant dans votre profil. Veuillez contacter l'administrateur.");
       }
 
       const orgName = user.organization?.code === 'HCA' ? 'Org2' : 'Org3';

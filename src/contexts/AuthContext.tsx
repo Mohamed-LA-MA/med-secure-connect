@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { ORG_MAPPING, OrganizationCode, getOrganizationCode } from '@/utils/organizationMapping';
 
@@ -14,6 +13,7 @@ export interface User {
   name: string;
   role: 'admin' | 'healthActor' | 'patient';
   organization: Organization;
+  matricule?: number; // Added matricule property as optional
 }
 
 interface AuthContextType {
@@ -71,6 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         name: 'Admin HCA',
         role: 'admin',
         organization: { name: 'Hôpital HCA', code: 'HCA' },
+        matricule: 1001, // Added matricule for admin
       });
       console.log("✅ Admin HCA créé avec succès");
     }
@@ -82,6 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         name: 'Admin HQA',
         role: 'admin',
         organization: { name: 'Hôpital HQA', code: 'HQA' },
+        matricule: 1002, // Added matricule for admin
       });
       console.log("✅ Admin HQA créé avec succès");
     }
