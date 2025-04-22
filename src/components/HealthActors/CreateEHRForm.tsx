@@ -160,8 +160,7 @@ export function CreateEHRForm() {
       
       setRequestCreated(true);
       
-      sonnerToast({
-        title: "Requête envoyée",
+      sonnerToast.success("Requête envoyée", {
         description: "Le patient a été notifié de votre demande de création d'EHR",
       });
       
