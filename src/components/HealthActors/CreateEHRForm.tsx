@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -29,14 +28,12 @@ import { EHRService, EHRFile } from '@/services/EHRService';
 import { IPFSService } from '@/services/IPFSService';
 import { useAuth } from '@/contexts/AuthContext';
 
-// Schéma de validation pour le formulaire principal
 const formSchema = z.object({
   patientMatricule: z.string().min(1, { message: "Le matricule du patient est requis" }),
   title: z.string().min(1, { message: "Le titre de l'EHR est requis" }),
   secretKey: z.string().min(1, { message: "La clé secrète est requise" }),
 });
 
-// Schéma de validation pour le formulaire de fichier
 const fileFormSchema = z.object({
   fileTitle: z.string().min(1, { message: "Le titre du fichier est requis" }),
   file: z.instanceof(File, { message: "Le fichier est requis" }),
@@ -54,7 +51,6 @@ export function CreateEHRForm() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isFileUploading, setIsFileUploading] = useState(false);
   
-  // Formulaire principal pour les données de l'EHR
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -64,7 +60,6 @@ export function CreateEHRForm() {
     },
   });
   
-  // Formulaire pour ajouter un fichier
   const fileForm = useForm<FileFormValues>({
     resolver: zodResolver(fileFormSchema),
     defaultValues: {
@@ -73,7 +68,6 @@ export function CreateEHRForm() {
     },
   });
   
-  // Gérer le changement de fichier
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -82,15 +76,12 @@ export function CreateEHRForm() {
     }
   };
   
-  // Ajouter un fichier à la liste
   const handleAddFile = async (data: FileFormValues) => {
     try {
       setIsFileUploading(true);
       
-      // Envoyer le fichier à IPFS
       const response = await IPFSService.uploadFile(data.file);
       
-      // Ajouter le fichier à la liste
       const newFile: EHRFile = {
         fileTitle: data.fileTitle,
         fileHash: response.hash,
@@ -98,7 +89,6 @@ export function CreateEHRForm() {
       
       setFiles([...files, newFile]);
       
-      // Réinitialiser le formulaire
       fileForm.reset();
       setSelectedFile(null);
       setIsAddingFile(false);
@@ -118,14 +108,12 @@ export function CreateEHRForm() {
     }
   };
   
-  // Supprimer un fichier de la liste
   const handleRemoveFile = (index: number) => {
     const updatedFiles = [...files];
     updatedFiles.splice(index, 1);
     setFiles(updatedFiles);
   };
   
-  // Soumettre le formulaire principal
   const onSubmit = async (data: FormValues) => {
     if (!user?.id) {
       toast({
@@ -148,25 +136,25 @@ export function CreateEHRForm() {
     setIsSubmitting(true);
     
     try {
-      // Déterminer l'organisation blockchain en fonction de l'organisation de l'utilisateur
+      if (!user.matricule) {
+        throw new Error("Le matricule de l'acteur de santé est manquant");
+      }
+
       const orgName = user.organization?.code === 'HCA' ? 'Org2' : 'Org3';
       
-      // Construire les données de l'EHR avec le matricule de l'acteur de santé (user.id)
       const ehrData = {
         title: data.title,
-        matricule: parseInt(user.id), // Utiliser l'ID de l'acteur de santé authentifié
-        hash: "", // Champ vide comme spécifié
+        matricule: user.matricule,
+        hash: "",
         ipfs: files,
         secretKey: data.secretKey,
       };
       
       console.log("Données EHR soumises:", ehrData);
       
-      // Créer l'EHR
       const ehrId = await EHRService.createEHR(ehrData, user.id, orgName);
       console.log("ID EHR créé:", ehrId);
       
-      // Mettre à jour l'EHR ID du patient
       const updateResult = await EHRService.updatePatientEHRID(parseInt(data.patientMatricule), parseInt(ehrId), user.id);
       console.log("Résultat de la mise à jour de l'EHR ID:", updateResult);
       
@@ -183,7 +171,6 @@ export function CreateEHRForm() {
         });
       }
       
-      // Réinitialiser le formulaire
       form.reset();
       setFiles([]);
     } catch (error: any) {
@@ -316,7 +303,6 @@ export function CreateEHRForm() {
         </Form>
       </CardContent>
       
-      {/* Dialog pour ajouter un fichier */}
       <Dialog open={isAddingFile} onOpenChange={setIsAddingFile}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -420,7 +406,6 @@ export function CreateEHRForm() {
   );
 }
 
-// Composant Label pour le formulaire de fichier
 function Label({ htmlFor, className, children }: { 
   htmlFor: string;
   className?: string;
