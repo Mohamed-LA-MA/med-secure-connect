@@ -1,5 +1,6 @@
 
 import { User } from '@/contexts/AuthContext';
+import { BlockchainService } from './BlockchainService'; // AJOUT
 
 export interface Request {
   id: string;
@@ -67,6 +68,19 @@ export class RequestService {
     actorOrganization: string,
     description?: string
   ): Promise<Request> {
+    // Appel Blockchain pour enregistrer la demande de consultation !
+    let blockchainRequestId: number | null = null;
+    try {
+      blockchainRequestId = await BlockchainService.setEHRConsultationRequest(patientMatricule, ehrId);
+      if (!blockchainRequestId) {
+        throw new Error("Erreur de création côté blockchain : ID non retourné");
+      }
+      console.log(`✅ Demande de consultation blockchain créée, ID: ${blockchainRequestId}`);
+    } catch (err: any) {
+      console.error("❌ Erreur Blockchain (SetRequest consultation):", err?.message || err);
+      // On continue malgré tout, pour fallback local/demo.
+    }
+
     const consultationRequest: Omit<Request, 'id' | 'createdAt' | 'updatedAt'> = {
       type: 'EHR_CONSULTATION',
       patientMatricule,
@@ -76,13 +90,17 @@ export class RequestService {
       actorOrganization,
       status: 'PENDING',
       title: 'Demande de consultation de dossier médical',
-      description: description || 'Demande d\'accès au dossier patient pour consultation médicale',
+      description: description || "Demande d'accès au dossier patient pour consultation médicale",
       ehrId
     };
 
-    // Appeler la fonction du smart contract (simulée ici)
-    console.log(`🔹 Simulation d'appel blockchain: SetRequest(${patientMatricule}, "consultation", ${ehrId})`);
-    
+    // id blockchain fictif/fallback injecté dans description
+    if (blockchainRequestId) {
+      consultationRequest.description =
+        (consultationRequest.description || "") +
+        ` (ID blockchain: ${blockchainRequestId})`;
+    }
+
     return this.createRequest(consultationRequest);
   }
 
@@ -121,10 +139,36 @@ export class RequestService {
     
     request.status = status;
     request.updatedAt = new Date().toISOString();
-    
-    // Si c'est une demande de consultation et qu'elle est acceptée, simuler l'appel à SetResponse
-    if (request.type === 'EHR_CONSULTATION' && status === 'ACCEPTED' && request.ehrId) {
-      console.log(`🔹 Simulation d'appel blockchain: SetResponse(${requestId}, "${request.patientMatricule}", "ACCEPTED")`);
+
+    // Si c'est une demande de consultation et qu'elle est acceptée, appel SetResponse blockchain
+    if (request.type === 'EHR_CONSULTATION' && request.ehrId) {
+      try {
+        // Sur la blockchain, l'ID est ID blockchain (optionnel en description) ou l'index local
+        // Pour la démo, on essaie de retrouver l'ID blockchain depuis la description si présent
+        let blockchainId = undefined;
+        if (request.description && request.description.includes('ID blockchain:')) {
+          const match = request.description.match(/ID blockchain:\s*(\d+)/);
+          if (match) blockchainId = Number(match[1]);
+        }
+        // Fallback sur un index bidon local si besoin
+        const blockchainRequestId: number = blockchainId || parseInt(request.id.replace(/\D/g, '')) || 0;
+
+        // patientMatricule côté blockchain = patientId numérique
+        const patientId = String(request.patientMatricule);
+
+        const ok = await BlockchainService.setEHRRequestResponse(
+          blockchainRequestId,
+          patientId,
+          status // "ACCEPTED" ou "REJECTED"
+        );
+        if (ok) {
+          console.log("✅ Statut blockchain MAJ via SetResponse");
+        } else {
+          throw new Error("Erreur SetResponse Blockchain");
+        }
+      } catch (err: any) {
+        console.error("❌ Erreur Blockchain (SetResponse):", err?.message || err);
+      }
     }
     
     requests[requestId] = request;
@@ -141,16 +185,36 @@ export class RequestService {
 
   static async getEHRByConsultationRequest(requestId: string): Promise<any | null> {
     const request = await this.getRequestById(requestId);
-    
     if (!request || request.type !== 'EHR_CONSULTATION' || request.status !== 'ACCEPTED') {
       console.error("❌ Requête de consultation non valide ou non acceptée");
       return null;
     }
-    
-    // Simuler l'appel à GetEHRByActor
-    console.log(`🔹 Simulation d'appel blockchain: GetEHRByActor(${request.actorId}, ${request.ehrId}, "consultation")`);
-    
-    // Pour la démonstration, retourner un EHR factice
+
+    // Utiliser la blockchain pour récupérer l’EHR
+    let blockchainEHR: any | null = null;
+    try {
+      const actorMatricule = Number(request.actorId) || request.patientMatricule; // fallback
+      blockchainEHR = await BlockchainService.getEHRByActor(
+        actorMatricule,
+        Number(request.ehrId),
+        "consultation"
+      );
+      if (blockchainEHR) {
+        console.log("✅ EHR récupéré de la blockchain:", blockchainEHR);
+        return {
+          id: request.ehrId,
+          title: blockchainEHR.title || "Dossier médical du patient",
+          createdAt: blockchainEHR.createdAt || new Date().toISOString(),
+          files: blockchainEHR.files || request.files || [],
+          secretKey: request.secretKey || "",
+          patientMatricule: request.patientMatricule,
+        };
+      }
+    } catch (err: any) {
+      console.error("❌ Erreur Blockchain (GetEHRByActor):", err?.message || err);
+    }
+
+    // Fallback local (mode démo)
     return {
       id: request.ehrId,
       title: "Dossier médical du patient",
