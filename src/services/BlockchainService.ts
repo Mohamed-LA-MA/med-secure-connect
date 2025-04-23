@@ -478,4 +478,153 @@ export class BlockchainService {
       return false;
     }
   }
+
+  /**
+   * Appeler la fonction SetRequest du contrat EHR pour une demande de consultation.
+   * @param matricule ID du patient (number)
+   * @param ehrId ID de l'EHR concerné (number)
+   * @returns L'ID de la requête créée (number) ou null en cas d'échec
+   */
+  static async setEHRConsultationRequest(matricule: number, ehrId: number): Promise<number | null> {
+    try {
+      const adminToken = await this.getAdminToken();
+      if (!adminToken) throw new Error("Impossible de récupérer le token d'admin");
+
+      // Fabrication de l'appel SetRequest (requestType = "consultation")
+      const functionName = "SetRequest";
+      const argsArr = [matricule, "consultation", ehrId].map(String);
+
+      const response = await axios.post(
+        `${API_CONFIG.BASE_URL}/channels/${API_CONFIG.CHANNEL}/chaincodes/ehr`,
+        {
+          fcn: functionName,
+          args: argsArr,
+        },
+        {
+          headers: {
+            "Authorization": `Bearer ${adminToken}`,
+            "Content-Type": "application/json"
+          }
+        }
+      );
+
+      if (
+        response.data &&
+        response.data.result &&
+        typeof response.data.result.data === 'number'
+      ) {
+        console.log("✅ SetRequest (consultation) effectué, ID:", response.data.result.data);
+        return response.data.result.data;
+      } else if (response.data?.result?.data) {
+        // Certains back-ends renvoient un string convertible en number
+        const parsedId = parseInt(response.data.result.data, 10);
+        if (!isNaN(parsedId)) {
+          console.log("✅ SetRequest (consultation) effectué, ID:", parsedId);
+          return parsedId;
+        }
+      }
+
+      // Gestion des erreurs venant du backend ou du chaincode
+      const errMsg = response.data?.message || response.data?.error || 'Réponse inattendue de la blockchain';
+      console.error("❌ Erreur SetRequest (consultation):", errMsg);
+      return null;
+    } catch (error: any) {
+      console.error("❌ Exception SetRequest (consultation):", error.response?.data || error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Appeler la fonction SetResponse du contrat EHR pour accepter/refuser une requête.
+   * @param requestId ID unique de la requête blockchain (number)
+   * @param patientId ID du patient (string)
+   * @param status String ("ACCEPTED" ou "REJECTED")
+   * @returns true si l'opération est réussie
+   */
+  static async setEHRRequestResponse(
+    requestId: number,
+    patientId: string,
+    status: "ACCEPTED" | "REJECTED"
+  ): Promise<boolean> {
+    try {
+      const adminToken = await this.getAdminToken();
+      if (!adminToken) throw new Error("Impossible de récupérer le token d'admin");
+
+      const functionName = "SetResponse";
+      const argsArr = [requestId, patientId, status].map(String);
+
+      const response = await axios.post(
+        `${API_CONFIG.BASE_URL}/channels/${API_CONFIG.CHANNEL}/chaincodes/ehr`,
+        {
+          fcn: functionName,
+          args: argsArr,
+        },
+        {
+          headers: {
+            "Authorization": `Bearer ${adminToken}`,
+            "Content-Type": "application/json"
+          }
+        }
+      );
+
+      if (response.data?.success) {
+        console.log("✅ SetResponse effectué avec succès");
+        return true;
+      }
+      const errMsg = response.data?.message || response.data?.error || 'Réponse inattendue de la blockchain';
+      console.error("❌ Erreur SetResponse:", errMsg);
+      return false;
+    } catch (error: any) {
+      console.error("❌ Exception SetResponse:", error.response?.data || error.message);
+      return false;
+    }
+  }
+
+  /**
+   * Récupérer un EHR via la méthode GetEHRByActor du contrat EHR
+   * @param matricule Matricule (ID) du patient auquel l'acteur veut accéder
+   * @param ehrId ID de l'EHR
+   * @param requestType Type de requête ("consultation", etc)
+   * @returns Données EHR ou null si accès refusé/n'existe pas
+   */
+  static async getEHRByActor(
+    matricule: number,
+    ehrId: number,
+    requestType: string
+  ): Promise<any | null> {
+    try {
+      const adminToken = await this.getAdminToken();
+      if (!adminToken) throw new Error("Impossible de récupérer le token d'admin");
+
+      const response = await axios.get(
+        `${API_CONFIG.BASE_URL}/channels/${API_CONFIG.CHANNEL}/chaincodes/ehr`,
+        {
+          params: {
+            fcn: "GetEHRByActor",
+            args: JSON.stringify([String(matricule), String(ehrId), requestType]),
+          },
+          headers: {
+            "Authorization": `Bearer ${adminToken}`,
+            "Content-Type": "application/json"
+          }
+        }
+      );
+
+      if (
+        response.data &&
+        response.data.result &&
+        response.data.result.data
+      ) {
+        console.log("✅ GetEHRByActor succès:", response.data.result.data);
+        return response.data.result.data;
+      }
+
+      const errMsg = response.data?.message || response.data?.error || "Données non trouvées";
+      console.error("❌ Erreur GetEHRByActor:", errMsg);
+      return null;
+    } catch (error: any) {
+      console.error("❌ Exception GetEHRByActor:", error.response?.data || error.message);
+      return null;
+    }
+  }
 }
