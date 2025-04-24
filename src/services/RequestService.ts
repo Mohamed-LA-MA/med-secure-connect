@@ -182,4 +182,9 @@ export class RequestService {
       patientMatricule: request.patientMatricule
     };
   }
+
+  static async getAllRequests(): Promise<Request[]> {
+    const requests = this.getStoredRequests();
+    return Object.values(requests);
+  }
 }

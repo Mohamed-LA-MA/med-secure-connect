@@ -11,6 +11,7 @@ export interface User {
     name: string;
     code: string;
   };
+  email?: string;
   ehrid?: string;
   dateOfBirth?: string;
   createdAt?: string;
@@ -22,6 +23,7 @@ interface AuthContextProps {
   login: (user: User) => void;
   logout: () => void;
   isAuthenticated: boolean;
+  organization: string; // Ajout de la propriété organization
 }
 
 const AuthContext = createContext<AuthContextProps>({
@@ -29,7 +31,8 @@ const AuthContext = createContext<AuthContextProps>({
   setUser: () => {},
   login: () => {},
   logout: () => {},
-  isAuthenticated: false
+  isAuthenticated: false,
+  organization: ''
 });
 
 export const AuthProvider = AuthContext.Provider;
