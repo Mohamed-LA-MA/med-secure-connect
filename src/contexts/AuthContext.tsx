@@ -1,3 +1,4 @@
+
 import { createContext, useContext } from 'react';
 
 export interface User {
@@ -5,13 +6,14 @@ export interface User {
   name: string;
   role: string;
   matricule: number;
-  organization?: {
+  organization: {
     id: string;
     name: string;
+    code: string;
   };
-  ehrid?: string;        // Ajout du champ ehrid
-  dateOfBirth?: string;  // Ajout du champ dateOfBirth
-  createdAt?: string;    // Ajout du champ createdAt
+  ehrid?: string;
+  dateOfBirth?: string;
+  createdAt?: string;
 }
 
 interface AuthContextProps {
@@ -19,6 +21,7 @@ interface AuthContextProps {
   setUser: (user: User | null) => void;
   login: (user: User) => void;
   logout: () => void;
+  isAuthenticated: boolean;
 }
 
 const AuthContext = createContext<AuthContextProps>({
@@ -26,8 +29,8 @@ const AuthContext = createContext<AuthContextProps>({
   setUser: () => {},
   login: () => {},
   logout: () => {},
+  isAuthenticated: false
 });
 
 export const AuthProvider = AuthContext.Provider;
-
 export const useAuth = () => useContext(AuthContext);

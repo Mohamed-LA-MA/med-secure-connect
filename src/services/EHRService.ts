@@ -20,18 +20,16 @@ export class EHRService {
     try {
       console.log("🔹 Création d'un EHR pour le patient...");
       
-      // Obtenir le token d'authentification
       const token = await BlockchainService.loginAdmin(username, orgName);
       if (!token) {
         throw new Error("Impossible d'obtenir un token d'authentification");
       }
       
-      // Préparer les arguments pour la création de l'EHR
       const filesJson = JSON.stringify(ehrData.ipfs);
       
       console.log("Arguments pour AddEHRAbstract:", [
         ehrData.title,
-        ehrData.matricule.toString(),
+        ehrData.matricule,
         ehrData.hash,
         filesJson,
         ehrData.secretKey
@@ -61,32 +59,20 @@ export class EHRService {
       console.log("✅ Réponse complète de la création d'EHR:", response.data);
       
       if (response.data && response.data.result) {
-        // La fonction AddEHRAbstract renvoie directement l'ID de l'EHR (un nombre)
-        // Nous devons extraire cet ID de la réponse
+        const nestedResult = response.data.result.result;
         let ehrId: string;
         
-        // Analyser la réponse pour extraire l'ID
-        if (typeof response.data.result === 'string') {
-          // Si la réponse est une chaîne, essayer de la parser comme JSON
-          try {
-            const resultObj = JSON.parse(response.data.result);
-            ehrId = resultObj.toString();
-          } catch (e) {
-            // Si ce n'est pas un JSON valide, utiliser directement la valeur
-            ehrId = response.data.result;
-          }
-        } else if (typeof response.data.result === 'number') {
-          // Si la réponse est un nombre
-          ehrId = response.data.result.toString();
+        if (typeof nestedResult === 'string') {
+          ehrId = nestedResult;
+        } else if (typeof nestedResult === 'number') {
+          ehrId = nestedResult.toString();
         } else {
-          // Si la réponse est déjà un objet
-          ehrId = response.data.result.toString();
+          ehrId = nestedResult.toString();
         }
         
         console.log("✅ EHR créé avec succès, ID:", ehrId);
         return ehrId;
       } else if (response.data && response.data.message) {
-        // Certaines API renvoient le résultat dans le champ message
         return response.data.message.toString();
       } else {
         throw new Error(`Échec de la création de l'EHR: Réponse inattendue - ${JSON.stringify(response.data)}`);
@@ -97,10 +83,15 @@ export class EHRService {
     }
   }
   
-  static async updatePatientEHRID(patientMatricule: number, ehrId: number, actorId: string): Promise<boolean> {
+  static async updatePatientEHRID(patientMatricule: number, ehrId: number, actorId: string, orgName: string): Promise<boolean> {
     try {
       console.log(`🔹 Mise à jour de l'ID EHR pour le patient avec matricule ${patientMatricule}...`);
       
+      const token = await BlockchainService.loginAdmin(actorId, orgName);
+      if (!token) {
+        throw new Error("Impossible d'obtenir un token d'authentification");
+      }
+
       const response = await axios.post(
         `${API_CONFIG.BASE_URL}/channels/${API_CONFIG.CHANNEL}/chaincodes/${API_CONFIG.CHAINCODE_HEALTH_PATIENT}`,
         {
@@ -114,7 +105,7 @@ export class EHRService {
         },
         {
           headers: {
-            "Authorization": `Bearer ${await BlockchainService.getAdminToken()}`,
+            "Authorization": `Bearer ${token}`,
             "Content-Type": "application/json"
           }
         }
