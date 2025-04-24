@@ -485,51 +485,40 @@ export class BlockchainService {
    * @param ehrId ID de l'EHR concerné (number)
    * @returns L'ID de la requête créée (number) ou null en cas d'échec
    */
-  static async setEHRConsultationRequest(matricule: number, ehrId: number): Promise<number | null> {
+  static async setEHRConsultationRequest(matricule: number, ehrId: number, actorId: string): Promise<number | null> {
     try {
-      const adminToken = await this.getAdminToken();
-      if (!adminToken) throw new Error("Impossible de récupérer le token d'admin");
-
-      // Fabrication de l'appel SetRequest (requestType = "consultation")
-      const functionName = "SetRequest";
-      const argsArr = [matricule, "consultation", ehrId].map(String);
+      const orgName = "org2";
+      const UserToken = await this.getAdminToken();
+      if (!UserToken) throw new Error("Impossible de récupérer le token d'user");
 
       const response = await axios.post(
         `${API_CONFIG.BASE_URL}/channels/${API_CONFIG.CHANNEL}/chaincodes/ehr`,
         {
-          fcn: functionName,
-          args: argsArr,
+          fcn: "SetRequest",
+          args: [matricule, "consultation_EHR_8", ehrId],
+          peers: ["peer0.org2.example.com"]
         },
-        {
-          headers: {
-            "Authorization": `Bearer ${adminToken}`,
-            "Content-Type": "application/json"
-          }
+        { 
+          headers: { 
+            "Authorization": `Bearer ${UserToken}`, 
+            "Content-Type": "application/json" 
+          } 
         }
       );
 
-      if (
-        response.data &&
-        response.data.result &&
-        typeof response.data.result.data === 'number'
-      ) {
-        console.log("✅ SetRequest (consultation) effectué, ID:", response.data.result.data);
-        return response.data.result.data;
-      } else if (response.data?.result?.data) {
-        // Certains back-ends renvoient un string convertible en number
-        const parsedId = parseInt(response.data.result.data, 10);
-        if (!isNaN(parsedId)) {
-          console.log("✅ SetRequest (consultation) effectué, ID:", parsedId);
-          return parsedId;
-        }
+      console.log("Réponse brute:", response.data);
+      const resultStr = response.data.result?.result;
+      const resultNum = parseInt(resultStr, 10);
+
+      if (isNaN(resultNum)) {
+        throw new Error(`La réponse ne contient pas un nombre valide: ${resultStr}`);
       }
 
-      // Gestion des erreurs venant du backend ou du chaincode
-      const errMsg = response.data?.message || response.data?.error || 'Réponse inattendue de la blockchain';
-      console.error("❌ Erreur SetRequest (consultation):", errMsg);
-      return null;
-    } catch (error: any) {
-      console.error("❌ Exception SetRequest (consultation):", error.response?.data || error.message);
+      console.log("✅ Valeur numérique récupérée:", resultNum);
+      return resultNum;
+    } 
+    catch (error) {
+      console.error("❌ Erreur:", error.response?.data || error.message);
       return null;
     }
   }
@@ -550,32 +539,20 @@ export class BlockchainService {
       const adminToken = await this.getAdminToken();
       if (!adminToken) throw new Error("Impossible de récupérer le token d'admin");
 
-      const functionName = "SetResponse";
-      const argsArr = [requestId, patientId, status].map(String);
-
       const response = await axios.post(
         `${API_CONFIG.BASE_URL}/channels/${API_CONFIG.CHANNEL}/chaincodes/ehr`,
         {
-          fcn: functionName,
-          args: argsArr,
+          fcn: "SetResponse",
+          args: [requestId, patientId, "APPROVED"],
+          peers: ["peer0.org2.example.com"]
         },
-        {
-          headers: {
-            "Authorization": `Bearer ${adminToken}`,
-            "Content-Type": "application/json"
-          }
-        }
+        { headers: { "Authorization": `Bearer ${adminToken}`, "Content-Type": "application/json" } }
       );
 
-      if (response.data?.success) {
-        console.log("✅ SetResponse effectué avec succès");
-        return true;
-      }
-      const errMsg = response.data?.message || response.data?.error || 'Réponse inattendue de la blockchain';
-      console.error("❌ Erreur SetResponse:", errMsg);
-      return false;
-    } catch (error: any) {
-      console.error("❌ Exception SetResponse:", error.response?.data || error.message);
+      console.log("✅ Réponse de la requête d'accès à l'EHR envoyée avec succès:", response.data);
+      return true;
+    } catch (error) {
+      console.error("❌ Erreur lors de l'approbation de la requête d'accès à l'EHR:", error.response?.data || error.message);
       return false;
     }
   }
